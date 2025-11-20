@@ -1,5 +1,7 @@
 // backend/utils/nameNormalizer.js
 
+const phonetic = require('phonetic');
+
 /**
  * Normalizes a name string for better matching.
  * - Converts to lowercase
@@ -22,4 +24,30 @@ function normalizeName(name) {
     .trim(); // Remove leading/trailing whitespace
 }
 
-module.exports = { normalizeName };
+/**
+ * Generates the Soundex code for a name.
+ * @param {string} name The name to process.
+ * @returns {string} The Soundex code.
+ */
+function getSoundex(name) {
+  if (!name || typeof name !== 'string') {
+    return '';
+  }
+  // The 'phonetic' library's soundex function is simple and sufficient for this purpose.
+  return phonetic.soundex(name);
+}
+
+/**
+ * Generates the Metaphone code for a name.
+ * @param {string} name The name to process.
+ * @returns {string} The Metaphone code.
+ */
+function getMetaphone(name) {
+  if (!name || typeof name !== 'string') {
+    return '';
+  }
+  // The 'phonetic' library's metaphone function is simple and sufficient for this purpose.
+  return phonetic.metaphone(name);
+}
+
+module.exports = { normalizeName, getSoundex, getMetaphone };

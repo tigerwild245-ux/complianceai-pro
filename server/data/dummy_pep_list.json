@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Barack Obama",
+    "country": "US",
+    "role": "Former President"
+  },
+  {
+    "name": "Angela Merkel",
+    "country": "DE",
+    "role": "Former Chancellor"
+  },
+  {
+    "name": "Vladimir Putin",
+    "country": "RU",
+    "role": "President"
+  }
+]

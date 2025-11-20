@@ -1,0 +1,20 @@
+{
+  "UN_Sanctions_List": {
+    "source": "https://scsanctions.un.org/resources/xml/en/consolidated.xml",
+    "last_updated": "2025-11-19T00:00:00.000Z",
+    "version": "1.0.0",
+    "status": "Current"
+  },
+  "OFAC_Sanctions_List": {
+    "source": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/CONSOLIDATED.XML",
+    "last_updated": "2025-11-19T00:00:00.000Z",
+    "version": "1.0.0",
+    "status": "Current"
+  },
+  "PEP_Sources": {
+    "source": "OpenSanctions (via provided links)",
+    "last_updated": "2025-11-19T00:00:00.000Z",
+    "version": "1.0.0",
+    "status": "Placeholder - Manual Update Required"
+  }
+}
