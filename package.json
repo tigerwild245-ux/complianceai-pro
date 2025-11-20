@@ -9,6 +9,10 @@
     "install-all": "npm install && cd frontend && npm install && cd ../server && npm install"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.3.1"
+  },
+  "dependencies": {
+    "react-router-dom": "^7.9.6"
   }
 }

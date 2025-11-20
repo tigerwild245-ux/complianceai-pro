@@ -1,35 +1,64 @@
-// server/services/falsePositiveService.js
-const fs = require('fs').promises;
-const path = require('path');
-const { normalizeName } = require('../utils/nameNormalizer');
+// server/services/falsePositiveService.js (Updated for Supabase)
 
-const FALSE_POSITIVES_PATH = path.join(__dirname, '../../data/falsePositives.json');
+const { supabase } = require('./supabaseService');
 
 async function getFalsePositives() {
   try {
-    const data = await fs.readFile(FALSE_POSITIVES_PATH, 'utf8');
-    return JSON.parse(data);
+    const { data, error } = await supabase
+      .from('false_positives')
+      .select('*');
+    
+    if (error) {
+      console.error('Error fetching false positives:', error);
+      return [];
+    }
+    return data || [];
   } catch (error) {
-    console.error('Error reading false positives file:', error);
+    console.error('An unexpected error occurred in falsePositiveService:', error);
     return [];
   }
 }
 
 async function isFalsePositive(name) {
-  const falsePositives = await getFalsePositives();
-  const normalizedName = normalizeName(name);
-  return falsePositives.some(fp => normalizeName(fp.name) === normalizedName);
+  if (!name) return false;
+  const normalizedName = name.toLowerCase().trim();
+  
+  try {
+    const { data, error } = await supabase
+      .from('false_positives')
+      .select('name')
+      .eq('name', normalizedName)
+      .single();
+    
+    if (error) {
+      console.error('Error checking false positive:', error);
+      return false;
+    }
+    return !!data; // Returns true if a match was found
+  } catch (error) {
+    console.error('An unexpected error occurred in falsePositiveService:', error);
+    return false;
+  }
 }
 
 async function addFalsePositive(name) {
-  const falsePositives = await getFalsePositives();
-  const normalizedName = normalizeName(name);
-  if (falsePositives.some(fp => normalizeName(fp.name) === normalizedName)) {
-    return { success: false, message: 'This name is already on the false positive list.' };
+  if (!name) throw new Error('Name is required');
+
+  try {
+    const { error } = await supabase
+      .from('false_positives')
+      .insert([{ name, added_on: new Date().toISOString() }])
+      .single();
+
+    if (error) {
+      console.error('Error adding false positive:', error);
+      return { success: false, message: 'An internal error occurred.' };
+    }
+    return { success: true, message: 'Successfully added to false positive list.' };
+  } catch (error) {
+    console.error('An unexpected error occurred in falsePositiveService:', error);
+    return { success: false, message: 'An internal error occurred.' };
   }
-  falsePositives.push({ name, addedOn: new Date().toISOString() });
-  await fs.writeFile(FALSE_POSITIVES_PATH, JSON.stringify(falsePositives, null, 2));
-  return { success: true, message: 'Successfully added to false positive list.' };
 }
 
 module.exports = { getFalsePositives, isFalsePositive, addFalsePositive };
