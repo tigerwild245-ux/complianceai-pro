@@ -1,8 +1,14 @@
-// scripts/enrichSanctionsList.cjs (Corrected Paths)
+// scripts/enrichSanctionsList.cjs (Corrected Version)
 
-import fs from 'fs/promises';
-import path from 'path';
-import { getGroqResponse } from '../services/groqService.js'; // Note the .js extension here
+// --- Load environment variables from the .env file ---
+// --- CORRECTED PATH ---
+require('dotenv').config({ path: 'server/.env' });
+
+
+// --- Import necessary modules ---
+const fs = require('fs').promises;
+const path = require('path');
+const { getGroqResponse } = require('../server/services/groqService'); 
 
 // The list of VIPs who will get LIVE bios (not pre-generated)
 const liveBioVIPs = [
@@ -19,12 +25,17 @@ async function generateBioForPEP(name) {
 
     PEP Name: "${name}"
 
-    Bio:
+    Respond in json format with a "bio" field containing your answer.
   `;
   try {
     // Add a small delay to avoid rate-limiting
     await new Promise(resolve => setTimeout(resolve, 500)); 
-    const bio = await getGroqResponse(prompt);
+    const response = await getGroqResponse(prompt);
+    
+    // Parse the JSON response
+    const parsed = JSON.parse(response);
+    const bio = parsed.bio || "Could not generate bio.";
+    
     return bio.replace(/^"|"$/g, '').replace(/\\n/g, ' ');
   } catch (error) {
     console.error(`Error generating bio for ${name}:`, error);
@@ -34,8 +45,8 @@ async function generateBioForPEP(name) {
 
 async function enrichList() {
   console.log("Starting data enrichment process...");
-  const sanctionsPath = path.join(process.cwd(), 'server/data/sanctions.json'); // Use process.cwd() for robustness
-  const enrichedPath = path.join(process.cwd(), 'server/data/sanctions_enriched.json');
+  const sanctionsPath = path.join(__dirname, '../server/data/sanctions.json');
+  const enrichedPath = path.join(__dirname, '../server/data/sanctions_enriched.json');
 
   try {
     const data = await fs.readFile(sanctionsPath, 'utf8');

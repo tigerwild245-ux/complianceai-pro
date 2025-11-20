@@ -1,0 +1,71 @@
+const express = require('express');
+const router = express.Router();
+const { supabase } = require('../services/supabaseService');
+
+// Get paginated sanctions list
+router.get('/', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const search = req.query.search || '';
+    
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from('sanctions_list')
+      .select('*', { count: 'exact' });
+
+    // Add search filter if provided
+    if (search) {
+      query = query.or(`entity_name.ilike.%${search}%,name.ilike.%${search}%`);
+    }
+
+    // Apply pagination
+    query = query
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching sanctions:', error);
+      return res.status(500).json({ error: 'Failed to fetch sanctions' });
+    }
+
+    res.json({
+      data,
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages: Math.ceil(count / limit),
+        hasMore: page * limit < count
+      }
+    });
+  } catch (error) {
+    console.error('Sanctions API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get single sanction by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('sanctions_list')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error) {
+      return res.status(404).json({ error: 'Sanction not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching sanction:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router;

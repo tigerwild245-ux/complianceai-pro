@@ -12,7 +12,8 @@ async function getGroqResponse(prompt) {
         content: prompt,
       },
     ],
-    model: "llama3-8b-8192",
+   model: "llama-3.1-8b-instant", // Updated to a current model
+      response_format: { type: "json_object" },
     // This is a key addition!
     response_format: { type: "json_object" },
   });

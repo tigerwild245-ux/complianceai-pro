@@ -1,5 +1,7 @@
 // server/services/screeningService.js
 
+const { logScreeningEvent } = require('./auditService');
+const { isFalsePositive } = require('./falsePositiveService');
 const sanctionsList = require('../data/sanctions.json');
 const Fuse = require('fuse.js');
 const { getGroqResponse } = require('./groqService');
