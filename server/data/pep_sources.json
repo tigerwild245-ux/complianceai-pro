@@ -1,0 +1,110 @@
+[
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "ma",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=ma",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "eg",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=eg",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "il",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=il",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "iq",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=iq",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "sd",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=sd",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "ye",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=ye",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "sa",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=sa",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "al",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=al",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "sy",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=sy",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "so",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=so",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "jo",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=jo",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "lb",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=lb",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "mr",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=mr",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "kw",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=kw",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "bh",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=bh",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "ae",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=ae",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "zz",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=zz",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  },
+  {
+    "list_type": "PEP_OpenSanctions",
+    "country_code": "un",
+    "source_url": "https://www.opensanctions.org/search/?scope=peps&countries=un",
+    "note": "Data needs to be acquired via OpenSanctions API or scraping."
+  }
+]
