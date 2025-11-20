@@ -7,27 +7,14 @@ from io import StringIO
 # --- Configuration ---
 UN_URL = "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 OFAC_URL = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/CONSOLIDATED.XML"
-PEP_LINKS = [
-    "https://www.opensanctions.org/search/?scope=peps&countries=ma", # Morocco
-    "https://www.opensanctions.org/search/?scope=peps&countries=eg", # Egypt
-    "https://www.opensanctions.org/search/?scope=peps&countries=il", # Israel
-    "https://www.opensanctions.org/search/?scope=peps&countries=iq", # Iraq
-    "https://www.opensanctions.org/search/?scope=peps&countries=sd", # Sudan
-    "https://www.opensanctions.org/search/?scope=peps&countries=ye", # Yemen
-    "https://www.opensanctions.org/search/?scope=peps&countries=sa", # Saudi Arabia
-    "https://www.opensanctions.org/search/?scope=peps&countries=al", # Albania
-    "https://www.opensanctions.org/search/?scope=peps&countries=sy", # Syria
-    "https://www.opensanctions.org/search/?scope=peps&countries=so", # Somalia
-    "https://www.opensanctions.org/search/?scope=peps&countries=jo", # Jordan
-    "https://www.opensanctions.org/search/?scope=peps&countries=lb", # Lebanon
-    "https://www.opensanctions.org/search/?scope=peps&countries=mr", # Mauritania
-    "https://www.opensanctions.org/search/?scope=peps&countries=kw", # Kuwait
-    "https://www.opensanctions.org/search/?scope=peps&countries=bh", # Bahrain
-    "https://www.opensanctions.org/search/?scope=peps&countries=ae", # UAE
-    "https://www.opensanctions.org/search/?scope=peps&countries=zz", # Global
-    "https://www.opensanctions.org/search/?scope=peps&countries=un", # UN
-]
+PEP_CSV_URL = "https://data.opensanctions.org/datasets/20251119/peps/targets.simple.csv"
 OUTPUT_DIR = "complianceai-pro/server/data"
+
+# List of ISO Alpha-2 country codes to keep for PEP data
+TARGET_COUNTRIES_ISO2 = {
+    "DZ", "BH", "DJ", "EG", "IR", "IQ", "IL", "JO", "KW", "LB", "LY", "MT", 
+    "MA", "OM", "PS", "QA", "SA", "SO", "SD", "SY", "TN", "AE", "YE"
+}
 
 def download_file(url, filename):
     print(f"Downloading {filename} from {url}...")
@@ -38,14 +25,14 @@ def download_file(url, filename):
             f.write(chunk)
     print(f"Successfully downloaded {filename}.")
 
+# (Keep parse_un_xml and parse_ofac_xml functions as they were, they are not changed)
+# ... (omitted for brevity, but they remain in the file) ...
+
 def parse_un_xml(xml_path):
     print("Parsing UN XML...")
     tree = ET.parse(xml_path)
     root = tree.getroot()
     sanctions_list = []
-    
-    # Define the namespace map
-    
     
     # Iterate over all individuals and entities
     for item in root.findall(".//INDIVIDUAL") + root.findall(".//ENTITY"): 
@@ -97,43 +84,39 @@ def parse_ofac_xml(xml_path):
     print(f"Finished parsing OFAC XML. Found {len(sanctions_list)} entries.")
     return sanctions_list
 
-def download_pep_data():
-    # Note: OpenSanctions links are search results, not direct data dumps.
-    # To get the actual data, we would need to scrape or use their API.
-    # For this task, we will simulate the data acquisition by creating a placeholder file
-    # and noting the links for future reference/manual download.
-    print("PEP data acquisition: OpenSanctions links are for search, not direct download.")
-    print("Creating a placeholder file with the provided links.")
+def download_and_filter_pep_data():
+    print(f"Downloading and filtering PEP data from {PEP_CSV_URL}...")
+    response = requests.get(PEP_CSV_URL)
+    response.raise_for_status()
     
-    pep_data = []
-    for link in PEP_LINKS:
-        # Extract country code from the link for a minimal entry
-        country_code = link.split('countries=')[-1]
-        pep_data.append({
-            "list_type": "PEP_OpenSanctions",
-            "country_code": country_code,
-            "source_url": link,
-            "note": "Data needs to be acquired via OpenSanctions API or scraping."
-        })
+    # Use StringIO to treat the response text as a file
+    csvfile = StringIO(response.text)
+    reader = csv.DictReader(csvfile)
+    
+    pep_list = []
+    
+    # The CSV columns are: name, country, position, birth_date, start_date, end_date, url
+    for row in reader:
+        country_code = row.get('country')
         
-    with open(f"{OUTPUT_DIR}/pep_sources.json", 'w') as f:
-        json.dump(pep_data, f, indent=2)
-    print(f"Saved PEP source links to {OUTPUT_DIR}/pep_sources.json.")
-    
-    # Since the user's existing repo has a 'sdn.csv' and 'alt.csv', we will assume
-    # the user has a local PEP/SDN list and will focus on integrating the new sanction lists.
-    # We will not attempt to scrape OpenSanctions as it is complex and likely against their ToS.
-    
-    # We will also create a dummy PEP list for testing the bio generation feature
-    dummy_pep_list = [
-        {"name": "Barack Obama", "country": "US", "role": "Former President"},
-        {"name": "Angela Merkel", "country": "DE", "role": "Former Chancellor"},
-        {"name": "Vladimir Putin", "country": "RU", "role": "President"},
-    ]
-    with open(f"{OUTPUT_DIR}/dummy_pep_list.json", 'w') as f:
-        json.dump(dummy_pep_list, f, indent=2)
-    print(f"Saved dummy PEP list to {OUTPUT_DIR}/dummy_pep_list.json for bio generation testing.")
+        # Filter by the target country list
+        if country_code and country_code.upper() in TARGET_COUNTRIES_ISO2:
+            # Optimize the data structure for Supabase (only essential fields)
+            pep_list.append({
+                "name": row['name'],
+                "country": row['country'],
+                "role": row['position'],
+                "source_url": row['url'],
+            })
 
+    print(f"Finished filtering PEP data. Found {len(pep_list)} entries for target countries.")
+    
+    # Save the optimized PEP list
+    with open(f"{OUTPUT_DIR}/pep_optimized.json", 'w') as f:
+        json.dump(pep_list, f, indent=2)
+    print(f"Saved optimized PEP list to {OUTPUT_DIR}/pep_optimized.json.")
+    
+    return pep_list
 
 def main():
     # 1. Download XML files
@@ -148,8 +131,6 @@ def main():
     combined_list = un_list + ofac_list
     
     # Optimization for Supabase (0.5GB limit):
-    # We will only store the essential fields for screening to keep the size down.
-    # The full details can be fetched from the original XML/DB if needed.
     optimized_list = []
     for item in combined_list:
         # Create a unique ID for each entry
@@ -181,7 +162,7 @@ def main():
     print(f"Saved optimized sanctions list to {OUTPUT_DIR}/sanctions_optimized.json.")
     
     # 4. Handle PEP data
-    download_pep_data()
+    download_and_filter_pep_data()
 
 if __name__ == "__main__":
     main()

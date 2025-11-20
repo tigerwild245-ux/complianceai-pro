@@ -1,7 +1,7 @@
 // server/services/supabaseService.js
 const { createClient } = require('@supabase/supabase-js');
 const sanctionsData = require('../data/sanctions_optimized.json'); // Optimized data
-const dummyPepList = require('../data/dummy_pep_list.json'); // Dummy PEP data
+const optimizedPepList = require('../data/pep_optimized.json'); // Optimized PEP data
 
 // Initialize the Supabase client
 // NOTE: The user's environment variables for SUPABASE_URL and SUPABASE_ANON_KEY
@@ -66,10 +66,10 @@ async function loadSanctionsData() {
 }
 
 /**
- * Loads the dummy PEP data into the Supabase table.
+ * Loads the optimized PEP data into the Supabase table.
  */
 async function loadPepData() {
-  console.log(`Attempting to load ${dummyPepList.length} PEP records into Supabase...`);
+  console.log(`Attempting to load ${optimizedPepList.length} PEP records into Supabase...`);
   try {
     // 1. Clear existing data
     await supabase.from(PEP_TABLE).delete().neq('name', 'placeholder');
@@ -77,7 +77,7 @@ async function loadPepData() {
     // 2. Insert new data
     const { error: insertError } = await supabase
       .from(PEP_TABLE)
-      .insert(dummyPepList);
+      .insert(optimizedPepList);
 
     if (insertError) {
       console.error('Error inserting PEP data:', insertError);
