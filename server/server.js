@@ -1,51 +1,40 @@
-// server/server.js - Memory and performance optimized with Authentication
-
-require('dotenv').config(); // Load environment variables immediately
+require('dotenv').config();
 console.log('🔍 DEBUG - Loaded FRONTEND_URL:', process.env.FRONTEND_URL);
 console.log('🔍 DEBUG - NODE_ENV:', process.env.NODE_ENV);
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { screenName } = require('./services/screeningService');
 const falsePositiveRoutes = require('./routes/falsePositives');
 const sanctionsRoutes = require('./routes/sanctions');
-const authRoutes = require('./routes/auth'); // ✅ Add authentication routes
-
+const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware Setup
-// 1. CORS: Allows frontend to talk to backend
-// Enhanced CORS configuration to handle preflight requests
+// Enhanced CORS configuration with regex patterns
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In development, allow all origins
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
     
-    // In production, check against patterns
     const allowedPatterns = [
-      /^https:\/\/complianceai-pro.*\.vercel\.app$/,  // All Vercel deployments
-      /^https:\/\/.*\.github\.dev$/,                   // GitHub Codespaces
+      /^https:\/\/complianceai-pro.*\.vercel\.app$/,
+      /^https:\/\/.*\.github\.dev$/,
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
     const isAllowed = allowedPatterns.some(pattern => {
-      if (typeof pattern === 'string') {
-        return origin === pattern;
-      }
+      if (typeof pattern === 'string') return origin === pattern;
       return pattern.test(origin);
     });
     
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked origin:', origin);
+      console.log('❌ CORS blocked:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -54,13 +43,8 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   optionsSuccessStatus: 204,
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 };
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  optionsSuccessStatus: 204,
-  maxAge: 86400 // 24 hours
-};
-
 app.use(cors(corsOptions));
 
 // Explicit OPTIONS handler for all routes
