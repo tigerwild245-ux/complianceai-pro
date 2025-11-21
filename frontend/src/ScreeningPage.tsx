@@ -4,7 +4,7 @@ import {
   TrendingUp, AlertTriangle, Shield, Globe, User, Building, Users
 } from 'lucide-react';
 
-const API_BASE_URL = 'https://complianceai-backend-7n50.onrender.com';
+const API_BASE_URL = 'https://complianceai-pro.onrender.com';
 
 interface Match {
   entity_name: string;
