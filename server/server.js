@@ -28,22 +28,34 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // In production, check against whitelist
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'https://complianceai-pro-xi.vercel.app',
-      'https://improved-yodel-r7pg46vwv5xfxvx4-5173.app.github.dev'
+    // In production, check against patterns
+    const allowedPatterns = [
+      /^https:\/\/complianceai-pro.*\.vercel\.app$/,  // All Vercel deployments
+      /^https:\/\/.*\.github\.dev$/,                   // GitHub Codespaces
+      process.env.FRONTEND_URL
     ].filter(Boolean);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    const isAllowed = allowedPatterns.some(pattern => {
+      if (typeof pattern === 'string') {
+        return origin === pattern;
+      }
+      return pattern.test(origin);
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
+      console.log('❌ CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // 24 hours
+};
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   optionsSuccessStatus: 204,
   maxAge: 86400 // 24 hours
