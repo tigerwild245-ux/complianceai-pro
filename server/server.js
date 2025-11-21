@@ -31,6 +31,7 @@ const corsOptions = {
     // In production, check against whitelist
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      'https://complianceai-pro-xi.vercel.app',
       'https://improved-yodel-r7pg46vwv5xfxvx4-5173.app.github.dev'
     ].filter(Boolean);
     
