@@ -1,0 +1,492 @@
+{
+  "core_logical": {
+    "exact_name_match": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 56,
+          "content": "\"def exact_match\", \"def normalize_name\", \"def compare_names\""
+        }
+      ]
+    },
+    "dob_matching": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 59,
+          "content": "\"def match_dob\", \"def parse_dob\", \"def compare_dates\""
+        }
+      ]
+    },
+    "nationality_matching": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 62,
+          "content": "\"def match_nationality\", \"def compare_nationality\""
+        }
+      ]
+    },
+    "id_document_matching": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 65,
+          "content": "\"def match_passport\", \"def match_id\", \"def compare_document\""
+        }
+      ]
+    }
+  },
+  "fuzzy_matching": {
+    "levenshtein": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 84,
+          "content": "\"levenshtein\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 85,
+          "content": "\"levenshtein\", \"edit_distance\", \"from Levenshtein import\""
+        }
+      ]
+    },
+    "jaro_winkler": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 87,
+          "content": "\"jaro_winkler\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 88,
+          "content": "\"jaro_winkler\", \"jaro\", \"jellyfish\""
+        }
+      ]
+    },
+    "token_based": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 91,
+          "content": "\"token_sort\", \"token_set\", \"fuzz.token\", \"rapidfuzz\""
+        }
+      ]
+    },
+    "ngram": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 93,
+          "content": "\"ngram\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 94,
+          "content": "\"ngram\", \"n_gram\", \"generate_ngrams\""
+        }
+      ]
+    },
+    "threshold_config": {
+      "files": [
+        "server/services/screeningService.js",
+        "scripts/scan_repository.py"
+      ],
+      "matches": 3,
+      "lines": [
+        {
+          "file": "server/services/screeningService.js",
+          "line": 23,
+          "content": "threshold: 0.3, // A slightly stricter threshold to reduce noise"
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 96,
+          "content": "\"threshold_config\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 97,
+          "content": "\"threshold\", \"similarity_threshold\", \"match_threshold\""
+        }
+      ]
+    }
+  },
+  "phonetic_matching": {
+    "soundex": {
+      "files": [
+        "server/utils/nameNormalizer.js",
+        "scripts/scan_repository.py"
+      ],
+      "matches": 8,
+      "lines": [
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 28,
+          "content": "* Generates the Soundex code for a name."
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 30,
+          "content": "* @returns {string} The Soundex code."
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 32,
+          "content": "function getSoundex(name) {"
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 36,
+          "content": "// The 'phonetic' library's soundex function is simple and sufficient for this p"
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 37,
+          "content": "return phonetic.soundex(name);"
+        }
+      ]
+    },
+    "metaphone": {
+      "files": [
+        "server/utils/nameNormalizer.js",
+        "scripts/scan_repository.py"
+      ],
+      "matches": 8,
+      "lines": [
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 41,
+          "content": "* Generates the Metaphone code for a name."
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 43,
+          "content": "* @returns {string} The Metaphone code."
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 45,
+          "content": "function getMetaphone(name) {"
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 49,
+          "content": "// The 'phonetic' library's metaphone function is simple and sufficient for this"
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 50,
+          "content": "return phonetic.metaphone(name);"
+        }
+      ]
+    },
+    "nysiis": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 122,
+          "content": "\"nysiis\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 123,
+          "content": "\"nysiis\", \"def nysiis\""
+        }
+      ]
+    }
+  },
+  "ai_analysis": {
+    "nlp_ner": {
+      "files": [
+        "server/utils/nameNormalizer.js",
+        "server/services/bioService.js",
+        "scripts/scan_repository.py",
+        "scripts/download_and_parse.py",
+        "scripts/import_all_sanctions.py",
+        "scripts/upload_fixed_final.py",
+        "scripts/import_sanctions.py",
+        "frontend/build/static/js/main.e724a32a.js",
+        "frontend/src/exportUtils.ts"
+      ],
+      "matches": 15,
+      "lines": [
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 28,
+          "content": "* Generates the Soundex code for a name."
+        },
+        {
+          "file": "server/utils/nameNormalizer.js",
+          "line": 41,
+          "content": "* Generates the Metaphone code for a name."
+        },
+        {
+          "file": "server/services/bioService.js",
+          "line": 5,
+          "content": "async function generateBioForPEP(name) {"
+        },
+        {
+          "file": "server/services/bioService.js",
+          "line": 26,
+          "content": "console.error(`Error generating bio for ${name}:`, error);"
+        },
+        {
+          "file": "server/services/bioService.js",
+          "line": 27,
+          "content": "return \"Could not generate bio.\";"
+        }
+      ]
+    },
+    "embeddings": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 146,
+          "content": "\"sentence_transformers\", \"SentenceTransformer\", \"embeddings\","
+        }
+      ]
+    },
+    "ml_classifier": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 150,
+          "content": "\"from sklearn\", \"RandomForest\", \"XGBoost\", \"classifier\","
+        }
+      ]
+    },
+    "transformers": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 154,
+          "content": "\"from transformers import\", \"AutoModel\", \"bert\", \"BERT\""
+        }
+      ]
+    }
+  },
+  "ai_risk_assessment": {
+    "risk_scoring": {
+      "files": [
+        "server/controllers/scanController.js",
+        "scripts/scan_repository.py",
+        "frontend/src/exportUtils.ts",
+        "frontend/src/lib/api.ts"
+      ],
+      "matches": 16,
+      "lines": [
+        {
+          "file": "server/controllers/scanController.js",
+          "line": 28,
+          "content": "risk_level: 'low', timestamp: new Date().toISOString()"
+        },
+        {
+          "file": "server/controllers/scanController.js",
+          "line": 52,
+          "content": "risk_level: risk, timestamp: new Date().toISOString()"
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 174,
+          "content": "\"risk_score\", \"calculate_risk\", \"risk_assessment\","
+        },
+        {
+          "file": "frontend/src/exportUtils.ts",
+          "line": 17,
+          "content": "risk_assessment?: {"
+        },
+        {
+          "file": "frontend/src/exportUtils.ts",
+          "line": 70,
+          "content": "'Risk Level': match.risk_assessment?.level || 'N/A',"
+        }
+      ]
+    },
+    "risk_factors": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 177,
+          "content": "\"risk_factors\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 178,
+          "content": "\"risk_factor\", \"risk_weight\", \"risk_criteria\""
+        }
+      ]
+    },
+    "risk_classification": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 180,
+          "content": "\"risk_classification\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 181,
+          "content": "\"risk_class\", \"classify_risk\", \"high_risk\", \"low_risk\", \"medium_risk\""
+        }
+      ]
+    },
+    "risk_reporting": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 183,
+          "content": "\"risk_reporting\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 184,
+          "content": "\"risk_report\", \"generate_risk\", \"risk_output\""
+        }
+      ]
+    }
+  },
+  "pep_bio_generation": {
+    "bio_generator": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 2,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 204,
+          "content": "\"generate_bio\", \"create_bio\", \"bio_generation\","
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 205,
+          "content": "\"def generate_biography\""
+        }
+      ]
+    },
+    "pep_profile": {
+      "files": [
+        "scripts/scan_repository.py",
+        "scripts/download_and_parse.py"
+      ],
+      "matches": 6,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 207,
+          "content": "\"pep_profile\": ["
+        },
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 208,
+          "content": "\"pep_profile\", \"political_exposure\", \"pep_data\", \"pep_info\""
+        },
+        {
+          "file": "scripts/download_and_parse.py",
+          "line": 226,
+          "content": "def fetch_pep_data():"
+        },
+        {
+          "file": "scripts/download_and_parse.py",
+          "line": 370,
+          "content": "pep_data = fetch_pep_data()"
+        },
+        {
+          "file": "scripts/download_and_parse.py",
+          "line": 377,
+          "content": "pep_saved = save_optimized_json(pep_data, PEP_OUTPUT, \"pep\")"
+        }
+      ]
+    },
+    "data_extraction": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 211,
+          "content": "\"extract_bio\", \"parse_bio\", \"bio_parser\", \"extract_profile\""
+        }
+      ]
+    },
+    "bio_formatting": {
+      "files": [
+        "scripts/scan_repository.py"
+      ],
+      "matches": 1,
+      "lines": [
+        {
+          "file": "scripts/scan_repository.py",
+          "line": 214,
+          "content": "\"format_bio\", \"structure_bio\", \"bio_template\""
+        }
+      ]
+    }
+  },
+  "missing_features": []
+}

@@ -1,30 +1,28 @@
 // server/services/bioService.js
+const { model } = require('../config/geminiClient');
 
-const { getGroqResponse } = require('./groqService');
-
-async function generateBioForPEP(name) {
+async function generateBioForPEP(name, contextInfo = "") {
+  if (!name) return null;
+  
   try {
-    const chatCompletion = await client.chat.completions.create({
-      messages: [
-        {
-          // --- THIS IS THE CORRECT PLACE FOR INSTRUCTIONS ---
-          role: "system",
-          content: "You are a compliance intelligence assistant. You must respond with a valid JSON object containing a single key 'bio'. The value of 'bio' should be a concise, 2-sentence summary. Do not include any other text or explanations outside of the JSON object."
-        },
-        {
-          role: "user",
-          // --- THE USER PROMPT IS NOW SIMPLE ---
-          content: `Provide a concise, 2-sentence bio for the following politically exposed person (PEP): ${name}.`
-        },
-      ],
-      model: "llama-3.1-8b-instant",
-      response_format: { type: "json_object" },
-    });
+    console.log(`📝 Generating bio for: ${name}`);
 
-    return chatCompletion.choices[0]?.message?.content || "";
+    const prompt = `Task: Write a strictly factual, 2-sentence biography about "${name}" ${contextInfo ? `(${contextInfo})` : ''}.
+Guidelines:
+1. Identify who they are (e.g., "Prime Minister of Egypt").
+2. If unsure, output: "Identity profile not verified."
+3. Output PLAIN TEXT only. No Markdown.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const bio = response.text();
+
+    console.log(`✅ Bio generated: ${bio.substring(0, 50)}...`);
+    return bio ? bio.replace(/^"|"$/g, '').trim() : "Profile unavailable.";
+
   } catch (error) {
-    console.error(`Error generating bio for ${name}:`, error);
-    return "Could not generate bio.";
+    console.error(`⚠️ Bio generation failed for ${name}:`, error.message);
+    return `${name} - Profile information unavailable. Please verify identity manually.`;
   }
 }
 

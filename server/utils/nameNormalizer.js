@@ -1,53 +1,17 @@
-// backend/utils/nameNormalizer.js
+const phoneticMatchers = require('./phoneticMatchers');
 
-const phonetic = require('phonetic');
-
-/**
- * Normalizes a name string for better matching.
- * - Converts to lowercase
- * - Removes punctuation
- * - Removes common titles and particles
- * - Removes extra whitespace
- * @param {string} name The name to normalize.
- * @returns {string} The normalized name.
- */
-function normalizeName(name) {
-  if (!name || typeof name !== 'string') {
-    return '';
-  }
-
-  return name
-    .toLowerCase()
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '') // Remove punctuation
-    .replace(/\b(al|bin|de|del|der|di|la|le|van|von|the|mr|mrs|ms|dr|jr|sr|iii|ii|iv)\b/g, '') // Remove common particles/titles
-    .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
-    .trim(); // Remove leading/trailing whitespace
+// Add NYSIIS to your matching suite
+function phoneticMatch(name1, name2) {
+  const soundexMatch = phoneticMatchers.soundex(name1) === phoneticMatchers.soundex(name2);
+  const metaphoneMatch = phoneticMatchers.metaphone(name1) === phoneticMatchers.metaphone(name2);
+  const nysiisMatch = phoneticMatchers.nysiis(name1) === phoneticMatchers.nysiis(name2);
+  
+  // If any 2 of 3 phonetic algorithms match, consider it a match
+  const matches = [soundexMatch, metaphoneMatch, nysiisMatch].filter(Boolean).length;
+  
+  return {
+    match: matches >= 2,
+    confidence: matches / 3,
+    details: { soundexMatch, metaphoneMatch, nysiisMatch }
+  };
 }
-
-/**
- * Generates the Soundex code for a name.
- * @param {string} name The name to process.
- * @returns {string} The Soundex code.
- */
-function getSoundex(name) {
-  if (!name || typeof name !== 'string') {
-    return '';
-  }
-  // The 'phonetic' library's soundex function is simple and sufficient for this purpose.
-  return phonetic.soundex(name);
-}
-
-/**
- * Generates the Metaphone code for a name.
- * @param {string} name The name to process.
- * @returns {string} The Metaphone code.
- */
-function getMetaphone(name) {
-  if (!name || typeof name !== 'string') {
-    return '';
-  }
-  // The 'phonetic' library's metaphone function is simple and sufficient for this purpose.
-  return phonetic.metaphone(name);
-}
-
-module.exports = { normalizeName, getSoundex, getMetaphone };

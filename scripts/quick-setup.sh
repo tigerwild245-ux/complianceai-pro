@@ -14,9 +14,10 @@ PORT=3001
 # Frontend URL (update after Vercel deployment)
 FRONTEND_URL=http://localhost:5173
 
-# Supabase Configuration (FILL THESE IN!)
+# Supabase Configuration
 SUPABASE_URL=https://dvtxfftauzoedgpdgbfe.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2dHhmZnRhdXpvZWRncGRnYmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NzQwMTIsImV4cCI6MjA3OTA1MDAxMn0.5MTjvNOq4-zr_CIu-IwDziGYRGPcw9b-t4D8TjFeQWc
+SUPABASE_SERVICE_KEY=your_actual_service_key_here # GET THIS FROM SUPABASE DASHBOARD
 
 # Gemini AI Configuration
 GEMINI_API_KEY=AIzaSyC8iQQKWFmuid6tr97Ae0VGSwQnEsdnkCg
@@ -38,7 +39,7 @@ else
     echo "✅ Virtual environment already exists"
 fi
 
-# 3. Activate virtual environment and install dependencies
+# 3. Install Python dependencies
 echo "🔧 Installing Python dependencies..."
 source venv/bin/activate
 pip install -r requirements.txt
@@ -93,7 +94,6 @@ echo "3. Run the frontend: cd frontend && npm run dev"
 echo "4. Test the API: curl -X POST http://localhost:3001/api/screen -H 'Content-Type: application/json' -d '{\"name\":\"John Doe\"}'"
 echo "5. For sanctions data import (TEST MODE first): python3 scripts/import_all_sanctions.py"
 echo ""
-echo "⚠️  IMPORTANT: The import script is set to test mode (10,000 records)."
-echo "   Change TEST_MODE = True to False in the script for full import."
+echo "⚠️  IMPORTANT: Set TEST_MODE = False in import_all_sanctions.py for full import."
 echo ""
 echo "🎉 Project is ready to run!"

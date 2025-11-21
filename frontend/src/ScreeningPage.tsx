@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, AlertCircle, CheckCircle, XCircle, Download, Clock, History, Crown, Shield, Award, FileSpreadsheet, FileText, FileDown, Brain, TrendingUp, AlertTriangle, LogOut, Globe } from 'lucide-react';
+import { 
+  Search, AlertCircle, CheckCircle, XCircle, Download, Brain, 
+  TrendingUp, AlertTriangle, Shield, Globe, User, Building, Users
+} from 'lucide-react';
 
 const API_BASE_URL = 'https://complianceai-backend-7n50.onrender.com';
 
@@ -11,6 +14,7 @@ interface Match {
   nationalities: string[];
   date_of_birth: string;
   match_score: number;
+  entity_summary?: string; 
   ai_analysis?: string;
   phonetic_matches?: string[];
   risk_explanation?: string;
@@ -28,7 +32,7 @@ interface SearchResult {
 }
 
 export default function ScreeningPage() {
-  const [entityName, setEntityName] = useState('Mostafa Madbouly');
+  const [entityName, setEntityName] = useState('');
   const [country, setCountry] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [entityType, setEntityType] = useState<'individual' | 'entity' | 'both'>('individual');
@@ -43,9 +47,9 @@ export default function ScreeningPage() {
   }, []);
 
   const fetchStats = async () => {
-    // Mock stats for demo
     setStats({
-      status: 'LIVE'
+      status: 'LIVE',
+      system_health: 'Operational'
     });
   };
 
@@ -81,7 +85,6 @@ export default function ScreeningPage() {
 
       const data = await response.json();
       
-      // Transform backend response
       const transformedResult: SearchResult = {
         name: data.name,
         match_found: data.match_found,
@@ -95,6 +98,7 @@ export default function ScreeningPage() {
             : match.nationalities || [],
           date_of_birth: match.date_of_birth || 'Not specified',
           match_score: match.confidence || match.match_score || 0,
+          entity_summary: match.entity_summary || match.bio || null, 
           ai_analysis: match.ai_analysis,
           phonetic_matches: match.phonetic_matches,
           risk_explanation: match.risk_explanation
@@ -114,7 +118,6 @@ export default function ScreeningPage() {
     }
   };
 
-  // Risk color and icon functions remain the same...
   const getRiskColor = (level: string) => {
     switch (level.toUpperCase()) {
       case 'HIGH': case 'CRITICAL': return 'bg-red-50 border-red-300 text-red-900';
@@ -155,29 +158,25 @@ export default function ScreeningPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-      {/* Header */}
-      <nav className="bg-white shadow-lg border-b border-blue-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg">
-              <Shield className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                ComplianceAI Pro
-              </h1>
-              <p className="text-xs text-blue-700 font-semibold">Enhanced Due Diligence & Sanctions Intelligence</p>
+      {/* Page Header Banner */}
+      <div className="bg-white shadow-sm border-b border-blue-100">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Enhanced PEP & Sanctions Screening</h2>
+            <p className="text-sm text-slate-600 font-medium">
+              Advanced Compliance screening against global watchlists with intelligent risk analysis
+            </p>
+            {/* System Status Indicator */}
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full border border-green-200">
+              <div className="relative">
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping"></div>
+              </div>
+              <span className="text-sm font-semibold text-green-800">System Operational</span>
             </div>
           </div>
-          <button
-            onClick={() => alert('Sign out functionality')}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-md font-semibold"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
         </div>
-      </nav>
+      </div>
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -190,7 +189,7 @@ export default function ScreeningPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900">Enhanced Due Diligence & Sanctions Screening</h2>
-                  <p className="text-sm text-slate-600">AI-powered global watchlist monitoring with bilingual support</p>
+                  <p className="text-sm text-slate-600">Enhanced Due Diligence and advanced global watchlist Screening & monitoring with bilingual support</p>
                 </div>
               </div>
 
@@ -257,32 +256,35 @@ export default function ScreeningPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => setEntityType('individual')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
+                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm flex items-center justify-center gap-2 ${
                         entityType === 'individual'
                           ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
                           : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
                       }`}
                     >
+                      <User className="w-4 h-4" />
                       Individual
                     </button>
                     <button
                       onClick={() => setEntityType('entity')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
+                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm flex items-center justify-center gap-2 ${
                         entityType === 'entity'
                           ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
                           : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
                       }`}
                     >
+                      <Building className="w-4 h-4" />
                       Entity
                     </button>
                     <button
                       onClick={() => setEntityType('both')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
+                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm flex items-center justify-center gap-2 ${
                         entityType === 'both'
                           ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
                           : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
                       }`}
                     >
+                      <Users className="w-4 h-4" />
                       Both
                     </button>
                   </div>
@@ -322,19 +324,19 @@ export default function ScreeningPage() {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      AI Screening in Progress...
+                      Screening in Progress...
                     </>
                   ) : (
                     <>
-                      <Brain className="w-5 h-5" />
-                      Enhanced AI Screening
+                      <Shield className="w-5 h-5" />
+                      Compliance Evaluation Screening
                     </>
                   )}
                 </button>
               </div>
             </div>
 
-            {/* AI Analysis Results */}
+            {/* Results Section */}
             {result && (
               <div className={`rounded-lg shadow-md border-2 p-8 ${getRiskColor(result.risk_level)}`}>
                 <div className="flex items-center justify-between mb-6">
@@ -354,17 +356,17 @@ export default function ScreeningPage() {
                   </div>
                 </div>
 
-                {/* AI Compliance Analysis */}
+                {/* AI Analysis */}
                 {result.ai_analysis && (
                   <div className="mb-6 p-6 bg-white/90 backdrop-blur rounded-lg border-2 border-slate-300 shadow-sm">
                     <div className="flex items-start gap-3 mb-3">
                       <Brain className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
                       <div className="flex-1">
                         <h4 className="font-bold text-lg text-slate-900 mb-1">
-                          AI Risk Intelligence Analysis
+                          🤖 Screening Advanced Analysis
                         </h4>
-                        <p className="text-sm text-slate-600 font-semibold uppercase tracking-wide">
-                          Groq AI Enhanced Assessment
+                        <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">
+                          Automated Intelligence Assessment
                         </p>
                       </div>
                     </div>
@@ -415,7 +417,7 @@ export default function ScreeningPage() {
                   </div>
                 )}
 
-                {/* Detailed Matches */}
+                {/* Match Details */}
                 {result.matches.length > 0 && (
                   <div className="space-y-4">
                     <h4 className="font-bold text-base flex items-center gap-2 text-slate-900 uppercase tracking-wide">
@@ -438,19 +440,41 @@ export default function ScreeningPage() {
                               </span>
                             </div>
                             <h5 className="text-xl font-bold text-slate-900">{match.entity_name}</h5>
-                            <p className="text-sm text-slate-600 font-medium">
+                            
+                            {/* Entity Bio/Summary */}
+                            {match.entity_summary && (
+                              <div className="mt-3 mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                                <div className="flex gap-3">
+                                  <div className="mt-1">
+                                    <div className="p-1.5 bg-indigo-100 rounded-full">
+                                      <User className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-1">
+                                      AI Identity Profile
+                                    </p>
+                                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                                      {match.entity_summary}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            <p className="text-sm text-slate-600 font-medium mt-2">
                               Program: <span className="font-bold text-slate-800">{match.program}</span>
                             </p>
                           </div>
                           <div className="text-right ml-4">
                             <div className="text-3xl font-bold text-slate-900">
-                              {(match.match_score * 100).toFixed(0)}%
+                              {Math.round(match.match_score > 1 ? match.match_score : match.match_score * 100)}%
                             </div>
                             <p className="text-xs text-slate-600 font-bold uppercase tracking-wide">AI Match Score</p>
                           </div>
                         </div>
 
-                        {/* AI Analysis for this match */}
+                        {/* Match AI Analysis */}
                         {match.ai_analysis && (
                           <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex items-start gap-2">
@@ -525,7 +549,7 @@ export default function ScreeningPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Stats Card */}
+            {/* Database Coverage */}
             {stats && (
               <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-6">
                 <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-slate-900">
@@ -553,16 +577,16 @@ export default function ScreeningPage() {
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-xl border-2 border-blue-200 p-6">
               <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-slate-900">
                 <Brain className="w-5 h-5 text-blue-600" />
-                AI Intelligence Features
+                Intelligent Risk Analysis Features
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-3 p-3.5 bg-white rounded-xl border border-blue-100 shadow-sm">
                   <Brain className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
                   <div className="flex-1">
                     <p className="font-bold text-lg text-slate-900 mb-1">
-                      Groq AI Analysis
+                      Screening Advanced Analysis
                     </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
+                    <p className="text-slate-600 font-semibold uppercase tracking-wide text-xs">
                       Real-time risk intelligence
                     </p>
                   </div>
@@ -573,7 +597,7 @@ export default function ScreeningPage() {
                     <p className="font-bold text-lg text-slate-900 mb-1">
                       Bilingual Search
                     </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
+                    <p className="text-slate-600 font-semibold uppercase tracking-wide text-xs">
                       Arabic & English screening
                     </p>
                   </div>
@@ -584,7 +608,7 @@ export default function ScreeningPage() {
                     <p className="font-bold text-lg text-slate-900 mb-1">
                       Phonetic Matching
                     </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
+                    <p className="text-slate-600 font-semibold uppercase tracking-wide text-xs">
                       Advanced name variations
                     </p>
                   </div>
@@ -593,6 +617,38 @@ export default function ScreeningPage() {
             </div>
           </div>
         </div>
+
+        {/* Footer Section */}
+        <footer className="mt-12 pb-8">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="text-center md:text-left">
+                <p className="text-slate-700 font-semibold text-base">
+                  Powered By{' '}
+                  <a 
+                    href="https://grc-consulting-nine.vercel.app/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 font-bold transition-colors hover:underline"
+                  >
+                    Mohamed Emam
+                  </a>
+                  {' '}- Compliance AI
+                </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  © {new Date().getFullYear()} ComplianceAI Pro. All rights reserved.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Shield className="w-8 h-8 text-blue-600" />
+                <div className="text-right">
+                  <p className="text-sm font-bold text-slate-900">ComplianceAI Pro</p>
+                  <p className="text-xs text-slate-600">Enterprise Solutions</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

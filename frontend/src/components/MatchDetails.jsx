@@ -1,19 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
-  User, 
-  Building, 
+  CheckCircle, 
+  XCircle, 
   AlertTriangle, 
-  Info, 
-  Calendar, 
-  MapPin, 
-  Globe, 
+  ChevronDown,
+  ChevronUp,
+  User,
+  Building,
   FileText,
+  Info,
+  Calendar,
+  MapPin,
+  Globe,
   Hash,
   Shield,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from 'lucide-react';
 
 const MatchDetails = ({ match, riskLevel }) => {
@@ -52,108 +57,259 @@ const MatchDetails = ({ match, riskLevel }) => {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            {getEntityIcon(match.type)}
-            {match.name}
-          </CardTitle>
-          <div className="flex gap-2">
-            <Badge className={getConfidenceColor(match.confidence)}>
-              Confidence: {getConfidenceLabel(match.confidence)} ({formatConfidence(match.confidence)})
-            </Badge>
-            <Badge className={getRiskColor(riskLevel)}>
-              {riskLevel?.toUpperCase() || 'LOW'} RISK
-            </Badge>
-          </div>
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {getEntityIcon(match.type)}
+          <span className="font-semibold text-lg">{match.name}</span>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">List Type:</span>
-              <Badge variant="outline">{match.list_type}</Badge>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Program:</span>
-              <span className="text-sm">{match.program}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Nationalities:</span>
-              <span className="text-sm">{match.nationalities}</span>
-            </div>
-            
-            <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-gray-500 mt-0.5" />
-              <div>
-                <span className="text-sm font-medium">Aliases:</span>
-                <p className="text-sm mt-1">{match.aliases}</p>
-              </div>
-            </div>
+        <div className="flex gap-2">
+          <Badge className={getConfidenceColor(match.confidence)}>
+            Confidence: {getConfidenceLabel(match.confidence)} ({formatConfidence(match.confidence)})
+          </Badge>
+          <Badge className={getRiskColor(riskLevel)}>
+            {riskLevel?.toUpperCase() || 'LOW'} RISK
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">List Type:</span>
+            <Badge variant="outline">{match.list_type}</Badge>
           </div>
           
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Date of Birth:</span>
-              <span className="text-sm">{match.date_of_birth}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Place of Birth:</span>
-              <span className="text-sm">{match.place_of_birth}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium">Jurisdiction:</span>
-              <span className="text-sm">{match.jurisdiction}</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {match.is_pep ? (
-                <ShieldAlert className="h-4 w-4 text-amber-500" />
-              ) : (
-                <Shield className="h-4 w-4 text-gray-500" />
-              )}
-              <span className="text-sm font-medium">Status:</span>
-              <Badge variant={match.is_pep ? "default" : "outline"}>
-                {match.is_pep ? "PEP" : "Sanctions"}
-              </Badge>
+          <div className="flex items-center gap-2">
+            <Hash className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Program:</span>
+            <span className="text-sm">{match.program}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Nationalities:</span>
+            <span className="text-sm">{match.nationalities}</span>
+          </div>
+          
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-gray-500 mt-0.5" />
+            <div>
+              <span className="text-sm font-medium">Aliases:</span>
+              <p className="text-sm mt-1">{match.aliases}</p>
             </div>
           </div>
         </div>
         
-        {match.remarks && (
-          <>
-            <Separator />
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-gray-500 mt-0.5" />
-              <div>
-                <span className="text-sm font-medium">Remarks:</span>
-                <p className="text-sm mt-1">{match.remarks}</p>
-              </div>
-            </div>
-          </>
-        )}
-        
-        <Separator />
-        
-        <div className="bg-gray-50 p-3 rounded-md">
-          <span className="text-sm font-medium">Full Details:</span>
-          <p className="text-sm mt-1 whitespace-pre-wrap">{match.details}</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Date of Birth:</span>
+            <span className="text-sm">{match.date_of_birth}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Place of Birth:</span>
+            <span className="text-sm">{match.place_of_birth}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Jurisdiction:</span>
+            <span className="text-sm">{match.jurisdiction}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {match.is_pep ? (
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
+            ) : (
+              <Shield className="h-4 w-4 text-gray-500" />
+            )}
+            <span className="text-sm font-medium">Status:</span>
+            <Badge variant={match.is_pep ? "default" : "outline"}>
+              {match.is_pep ? "PEP" : "Sanctions"}
+            </Badge>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      {match.remarks && (
+        <>
+          <Separator />
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-gray-500 mt-0.5" />
+            <div>
+              <span className="text-sm font-medium">Remarks:</span>
+              <p className="text-sm mt-1">{match.remarks}</p>
+            </div>
+          </div>
+        </>
+      )}
+      
+      <Separator />
+      
+      <div className="bg-gray-50 p-3 rounded-md">
+        <span className="text-sm font-medium">Full Details:</span>
+        <p className="text-sm mt-1 whitespace-pre-wrap">{match.details}</p>
+      </div>
+    </div>
   );
 };
 
-export default MatchDetails;
+const ResultsDisplay = ({ results }) => {
+  const [expandedMatch, setExpandedMatch] = useState(0);
+  
+  if (!results) return null;
+  
+  const { match_found, matches, risk_level, name, demo_mode, bio, ai_analysis } = results;
+  
+  const getStatusIcon = () => {
+    if (!match_found) return <XCircle className="h-6 w-6 text-green-500" />;
+    
+    switch (risk_level?.toLowerCase()) {
+      case 'critical': return <AlertTriangle className="h-6 w-6 text-red-500" />;
+      case 'high': return <AlertTriangle className="h-6 w-6 text-orange-500" />;
+      case 'medium': return <AlertTriangle className="h-6 w-6 text-yellow-500" />;
+      default: return <CheckCircle className="h-6 w-6 text-green-500" />;
+    }
+  };
+  
+  const getRiskColor = (level) => {
+    switch (level?.toLowerCase()) {
+      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-green-100 text-green-800 border-green-200';
+    }
+  };
+  
+  const getConfidenceColor = (confidence) => {
+    if (confidence >= 0.9) return 'bg-green-100 text-green-800';
+    if (confidence >= 0.7) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+  
+  const formatConfidence = (confidence) => {
+    return `${Math.round(confidence * 100)}%`;
+  };
+  
+  const getEntityIcon = (type) => {
+    return type === 'entity' ? 
+      <Building className="h-4 w-4" /> : 
+      <User className="h-4 w-4" />;
+  };
+  
+  const toggleExpanded = (index) => {
+    setExpandedMatch(expandedMatch === index ? -1 : index);
+  };
+  
+  return (
+    <div className="w-full space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {getStatusIcon()}
+              <span>Screening Results for: {name}</span>
+            </div>
+            {demo_mode && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                Demo Mode
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!match_found ? (
+            <div className="text-center py-6">
+              <p className="text-lg font-medium text-green-600">No matches found</p>
+              <p className="text-sm text-gray-500 mt-1">The individual/entity is not on any sanctions list</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge className={getRiskColor(risk_level)}>
+                  {risk_level?.toUpperCase() || 'LOW'} RISK
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  {matches.length} potential match{matches.length > 1 ? 'es' : ''} found
+                </span>
+              </div>
+              
+              {/* Bio Section */}
+              {bio && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-blue-600" />
+                      <span>Background Information</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-700 leading-relaxed">{bio}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* AI Analysis Section */}
+              {ai_analysis && (
+                <Card className="bg-purple-50 border-purple-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Info className="h-5 w-5 text-purple-600" />
+                      <span>AI Analysis</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{ai_analysis}</p>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Matches */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-gray-700">Detailed Matches:</h3>
+                {matches.map((match, index) => (
+                  <div key={index} className="border rounded-lg overflow-hidden">
+                    <div 
+                      className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleExpanded(index)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {getEntityIcon(match.type)}
+                          <span className="font-medium">{match.name}</span>
+                          <Badge variant="outline">{match.list_type}</Badge>
+                          <Badge className={getConfidenceColor(match.confidence)}>
+                            {formatConfidence(match.confidence)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {index === expandedMatch ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {index === expandedMatch && (
+                      <div className="border-t">
+                        <MatchDetails match={match} riskLevel={risk_level} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export { ResultsDisplay, MatchDetails };

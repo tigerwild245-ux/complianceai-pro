@@ -1,0 +1,190 @@
+// server/services/aiAnalysisService.js
+// Hybrid AI: Groq (fast) with Gemini fallback (reliable)
+
+const Groq = require('groq-sdk');
+const { ai: geminiAi, model: geminiModel } = require('../config/geminiClient');
+
+// Initialize Groq
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
+
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_TIMEOUT = 5000; // 5 seconds max
+
+/**
+ * Analyze sanctions match using AI
+ * Strategy: Try Groq first (fast), fallback to Gemini (reliable)
+ */
+async function analyzeSanctionsMatch(inputName, inputDetails, candidateContext) {
+  const prompt = buildPrompt(inputName, inputDetails, candidateContext);
+  
+  console.log('🤖 Starting AI analysis...');
+  
+  // STRATEGY 1: Try Groq first (0.3-0.8 seconds)
+  const groqResult = await tryGroq(prompt);
+  if (groqResult.success) {
+    console.log('✅ Groq analysis complete (fast path)');
+    return groqResult.analysis;
+  }
+  
+  console.log('⚠️  Groq failed, trying Gemini fallback...');
+  
+  // STRATEGY 2: Fallback to Gemini (2-5 seconds)
+  const geminiResult = await tryGemini(prompt);
+  if (geminiResult.success) {
+    console.log('✅ Gemini analysis complete (fallback path)');
+    return geminiResult.analysis;
+  }
+  
+  // STRATEGY 3: Both failed - return rule-based analysis
+  console.log('⚠️  Both AI services failed, using rule-based fallback');
+  return getFallbackAnalysis(candidateContext);
+}
+
+/**
+ * Try Groq with timeout
+ */
+async function tryGroq(prompt) {
+  if (!process.env.GROQ_API_KEY) {
+    return { success: false, error: 'No Groq API key' };
+  }
+
+  try {
+    const startTime = Date.now();
+    
+    const response = await groq.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 1000,
+    });
+
+    const responseTime = Date.now() - startTime;
+    console.log(`⚡ Groq responded in ${responseTime}ms`);
+
+    // --- ADD ROBUST ERROR HANDLING ---
+    if (!response || !response.choices || response.choices.length === 0) {
+      console.warn('⚠️ Groq returned an empty or invalid response:', response);
+      return { success: false, error: 'Invalid response from AI service.' };
+    }
+
+    const jsonText = response.choices[0].message.content
+      .trim()
+      .replace(/```json|```/g, '');
+    
+    const analysis = JSON.parse(jsonText);
+    
+    return {
+      success: true,
+      analysis: {
+        ...analysis,
+        ai_provider: 'groq',
+        response_time_ms: responseTime
+      }
+    };
+
+  } catch (error) {
+    console.warn('Groq error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Try Gemini (fallback)
+ */
+async function tryGemini(prompt) {
+  if (!process.env.GEMINI_API_KEY) {
+    return { success: false, error: 'No Gemini API key' };
+  }
+
+  try {
+    const startTime = Date.now();
+    
+    const aiResponse = await geminiAi.models.generateContent({
+      model: geminiModel,
+      contents: prompt
+    });
+
+    const responseTime = Date.now() - startTime;
+    console.log(`🔷 Gemini responded in ${responseTime}ms`);
+
+    const jsonText = aiResponse.text().trim().replace(/```json|```/g, '');
+    const analysis = JSON.parse(jsonText);
+
+    return {
+      success: true,
+      analysis: {
+        ...analysis,
+        ai_provider: 'gemini',
+        response_time_ms: responseTime
+      }
+    };
+
+  } catch (error) {
+    console.warn('Gemini error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Build the AI prompt
+ */
+function buildPrompt(inputName, inputDetails, candidateContext) {
+  return `You are a Senior Compliance Officer performing sanctions and PEP screening.
+
+**SCREENING REQUEST**:
+Name: "${inputName}"
+Additional Details: ${JSON.stringify(inputDetails)}
+
+**TOP MATCH FOUND**:
+- Full Name: "${candidateContext.name}"
+- Type: ${candidateContext.type || 'Unknown'}
+- Source: ${candidateContext.source}
+- Program: ${candidateContext.program || 'N/A'}
+- Match Score: ${candidateContext.score.toFixed(1)}/100
+${candidateContext.isPEP ? `- PEP Status: Yes (${candidateContext.pepLevel})
+- Position: ${candidateContext.position || 'N/A'}
+- Jurisdiction: ${candidateContext.jurisdiction || 'N/A'}` : ''}
+- Nationalities: ${JSON.stringify(candidateContext.nationalities) || 'Unknown'}
+- Known Aliases: ${JSON.stringify(candidateContext.aliases) || 'None'}
+- Date of Birth: ${candidateContext.dob || 'Unknown'}
+- Remarks: ${candidateContext.remarks || 'None'}
+
+**EVALUATION CRITERIA**:
+1. Score > 85 + Strong name similarity → Likely TRUE MATCH
+2. Score 70-85 + Some discrepancies → REQUIRES_REVIEW
+3. Score < 70 OR major conflicts → FALSE_POSITIVE
+4. Consider: common names, spelling variations, aliases
+5. PEP matches require extra scrutiny
+
+**RESPOND IN JSON ONLY** (no markdown, no explanation):
+{
+  "risk_level": "LOW" | "MEDIUM" | "HIGH",
+  "final_decision": "MATCH" | "FALSE_POSITIVE" | "REQUIRES_REVIEW",
+  "reasoning": "Brief explanation (1-2 sentences)",
+  "bio": "Two sentence biography of the sanctioned/PEP entity",
+  "confidence": 0-100,
+  "recommended_action": "Clear" | "Enhanced Due Diligence" | "Reject"
+}`;
+}
+
+/**
+ * Fallback analysis (rule-based)
+ */
+function getFallbackAnalysis(candidateContext) {
+  const score = candidateContext.score;
+  
+  return {
+    risk_level: score > 85 ? "HIGH" : score > 70 ? "MEDIUM" : "LOW",
+    final_decision: score > 85 ? "MATCH" : score > 70 ? "REQUIRES_REVIEW" : "FALSE_POSITIVE",
+    reasoning: "AI analysis unavailable. Decision based on match score and rule-based logic.",
+    bio: `${candidateContext.name} is listed on ${candidateContext.source}${candidateContext.program ? ' under ' + candidateContext.program : ''}.${candidateContext.isPEP ? ' This is a Politically Exposed Person.' : ''}`,
+    confidence: score,
+    recommended_action: score > 85 ? "Reject" : score > 70 ? "Enhanced Due Diligence" : "Clear",
+    ai_provider: 'fallback_rules',
+    response_time_ms: 0
+  };
+}
+
+module.exports = { analyzeSanctionsMatch };

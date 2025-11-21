@@ -1,14 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from './AuthContext'; // We keep this hook active
 import Login from './Login';
 import Register from './Register';
 import ProtectedRoute from './ProtectedRoute';
 import ScreeningPage from './ScreeningPage';
 import Footer from './Footer';
-import { LogOut } from 'lucide-react';
 
 function Dashboard() {
-  const { user, signOut } = useAuth();
+  // We keep getting the user data to display the email
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -21,19 +21,18 @@ function Dashboard() {
             <span className="text-sm text-gray-600">
               {user?.email}
             </span>
-            <button
-              onClick={() => signOut()}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
+            {/* REMOVED: The duplicate "Sign Out" button from the design.
+               The actual sign out logic remains in AuthContext 
+               and is used by your other working Log Out button.
+            */}
           </div>
         </div>
       </nav>
+      
       <div className="flex-grow">
         <ScreeningPage />
       </div>
+      
       <Footer />
     </div>
   );

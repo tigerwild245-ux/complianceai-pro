@@ -1,5 +1,164 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
+// ============================================================================
+// AUTHENTICATION INTERFACES & FUNCTIONS
+// ============================================================================
+
+interface SignUpData {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+interface SignInData {
+  email: string;
+  password: string;
+}
+
+interface AuthResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+    role?: string;
+  };
+}
+
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+}
+
+// Authentication API
+export const authAPI = {
+  /**
+   * Sign up a new user
+   */
+  signUp: async (userData: SignUpData): Promise<AuthResponse> => {
+    const url = `${API_BASE_URL}/api/auth/register`;
+    
+    console.log('🔐 Signing up:', { email: userData.email, url });
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: userData.fullName,
+          email: userData.email,
+          password: userData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      // Store token if provided
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      console.log('✅ Sign up successful');
+      return data;
+      
+    } catch (error: any) {
+      console.error('❌ Sign up error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sign in existing user
+   */
+  signIn: async (credentials: SignInData): Promise<AuthResponse> => {
+    const url = `${API_BASE_URL}/api/auth/login`;
+    
+    console.log('🔐 Signing in:', { email: credentials.email, url });
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store token and user info
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      console.log('✅ Sign in successful');
+      return data;
+      
+    } catch (error: any) {
+      console.error('❌ Sign in error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Sign out current user
+   */
+  signOut: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    console.log('👋 Signed out');
+  },
+
+  /**
+   * Get current user from localStorage
+   */
+  getCurrentUser: (): User | null => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem('token');
+  },
+
+  /**
+   * Get authentication token
+   */
+  getToken: (): string | null => {
+    return localStorage.getItem('token');
+  },
+};
+
+// ============================================================================
+// SCREENING INTERFACES & FUNCTIONS (Your existing code)
+// ============================================================================
+
 interface ScreenRequest {
   name: string;
   type?: string;
@@ -143,12 +302,21 @@ export const screenEntity = async (data: ScreenRequest): Promise<EnhancedSearchR
   });
   
   try {
+    // Get auth token if available
+    const token = authAPI.getToken();
+    const headers: HeadersInit = { 
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Add authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         name: data.name,  // ✅ Correct: "name" not "entity_name"
         type: data.type || 'individual',

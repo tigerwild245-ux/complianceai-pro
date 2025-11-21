@@ -1,17 +1,21 @@
 // server/config/geminiClient.js
 require('dotenv').config();
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 
-if (!geminiApiKey) {
-  throw new Error('GEMINI_API_KEY is not set. Please add it to your server/.env file.');
+if (!apiKey) {
+  console.warn("⚠️  GEMINI_API_KEY is missing in .env file");
 }
 
-// Initialize the Gemini AI client
-const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+// Initialize and export the model instance
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({ 
+  model: process.env.GEMINI_MODEL || "gemini-2.5-flash" 
+});
 
-// Use Gemini 1.5 Flash for speed and cost-effectiveness
-const model = "gemini-1.5-flash"; 
-
-module.exports = { ai, model };
+module.exports = { 
+  GoogleGenerativeAI, 
+  apiKey,
+  model  // Export the model instance
+};
