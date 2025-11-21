@@ -171,7 +171,7 @@ app.use((err, req, res, next) => {
 // SERVER STARTUP - THIS WAS MISSING!
 // ====================================
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   logger.info(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
