@@ -34,3 +34,5 @@ logs/
 .env
 venv/
 __pycache__/
+data/targets.simple.csv
+data/*.csv
