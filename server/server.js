@@ -21,8 +21,9 @@ const corsOptions = {
     }
     
     const allowedPatterns = [
-      /^https:\/\/complianceai-pro.*\.vercel\.app$/,
+      /^https:\/\/.*complianceai.*\.vercel\.app$/,  // More flexible pattern for Vercel
       /^https:\/\/.*\.github\.dev$/,
+      /^http:\/\/localhost(:\d+)?$/,  // Allow localhost with any port
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -34,12 +35,12 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.log('❌ CORS blocked:', origin);
+      console.log('❌ CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   optionsSuccessStatus: 204,
