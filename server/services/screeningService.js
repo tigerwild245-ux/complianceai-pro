@@ -4,7 +4,8 @@ const transformerService = require('./transformerService');
 const idMatcher = require('../utils/idMatcher');
 const { logScreeningEvent } = require('./auditService');
 const { analyzeSanctionsMatch } = require('./aiAnalysisService');
-const { generateBioForPEP } = require('../services/bioService'); 
+const { generateBioForPEP } = require('../services/bioService');
+const aiNameMatcher = require('./aiNameMatcher'); // 🆕 ADDED
 const NodeCache = require('node-cache');
 
 // Initialize cache: 1 hour TTL, check expired keys every 2 minutes
@@ -102,101 +103,33 @@ const performSemanticAnalysis = async (inputName, candidateName) => {
   return null;
 };
 
+// 🆕 UPDATED: New AI-powered calculateMatchScore
 const calculateMatchScore = async (candidate, inputName, inputDetails) => {
-  let matchScore = candidate.similarity_score * 100;
-  const analysisLog = [`Fuzzy: ${matchScore.toFixed(1)}%`];
-  const candidateFullName = candidate.entity_name || `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
-
-  const normalize = (str) => str ? str.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[\u064B-\u065F]/g, '').replace(/[.,\-_]/g, ' ') : '';
-  const normalizedInput = normalize(inputName);
-  const normalizedCandidate = normalize(candidateFullName);
-  const isCrossLanguage = (hasArabic(inputName) && hasLatin(candidateFullName)) || (hasLatin(inputName) && hasArabic(candidateFullName));
-
-  // 1. CONTAINMENT BOOST
-  if (normalizedInput.length >= 3 && normalizedCandidate.includes(normalizedInput)) {
-    const pattern = new RegExp(`(?:^|\\s)${normalizedInput}(?:\\s|$)`);
-    if (pattern.test(normalizedCandidate)) {
-      if (matchScore < 60) { matchScore = 60; analysisLog.push('✅ Exact Part-Name Match'); }
-      else { matchScore += 10; }
-    } else {
-      if (matchScore < 40) { matchScore += 15; analysisLog.push('Partial Substring'); }
-    }
-  }
-
-  // 2. SEMANTIC MATCHING
-  const semanticScore = await performSemanticAnalysis(inputName, candidateFullName);
-  if (semanticScore !== null && !isNaN(semanticScore)) {
-    if (matchScore < 10 && semanticScore > 80) matchScore = semanticScore;
-    else matchScore = (matchScore * 0.6) + (semanticScore * 0.4);
-    analysisLog.push(`Semantic: ${semanticScore.toFixed(1)}%`);
-  }
-
-  // 3. FULL ALIAS MATCHING
-  if (candidate.aliases) {
-    try {
-      let aliasBoost = 0;
-      const aliases = Array.isArray(candidate.aliases) ? candidate.aliases : [candidate.aliases];
-      
-      for (const alias of aliases) {
-        const aliasStr = typeof alias === 'object' ? JSON.stringify(alias) : String(alias);
-        const normalizedAlias = normalize(aliasStr);
-        
-        if (normalizedInput === normalizedAlias) {
-          aliasBoost = 60;
-          analysisLog.push('✅ Alias (Exact)');
-          break;
-        }
-        if (normalizedInput.length >= 3 && normalizedAlias.includes(normalizedInput)) {
-           const pattern = new RegExp(`(?:^|\\s)${normalizedInput}(?:\\s|$)`);
-           if (pattern.test(normalizedAlias)) aliasBoost = Math.max(aliasBoost, 40);
-        }
-        if (normalizedAlias.includes(normalizedInput) || normalizedInput.includes(normalizedAlias)) {
-           aliasBoost = Math.max(aliasBoost, isCrossLanguage ? 50 : 30);
-        }
-      }
-      
-      if (aliasBoost > 0) {
-        if (matchScore < 40 && aliasBoost >= 50) { matchScore += aliasBoost; analysisLog.push(`Alias Boost: +${aliasBoost}`); }
-        else if (matchScore < 60 && aliasBoost >= 30) { matchScore += (aliasBoost * 0.8); analysisLog.push('Alias Boost'); }
-        else if (aliasBoost >= 15) { matchScore += 15; analysisLog.push('✅ Alias'); }
-      }
-    } catch (err) { console.warn("Alias check failed", err); }
-  }
-
-  // 4. PEP BOOST
-  if (candidate.is_pep) {
-    analysisLog.push(`PEP: ${candidate.pep_level || 'Unknown'}`);
-    if ((candidate.pep_level === 'NATIONAL' || candidate.pep_level === 'REGIONAL') && matchScore < 60 && matchScore >= 30) {
-       matchScore += 25; analysisLog.push('PEP Boost');
-    }
-  }
-
-  // 5. EXACT ID MATCHING
-  if (inputDetails.passportNumber && candidate.passport_number) {
-    if (idMatcher.matchPassport(inputDetails.passportNumber, candidate.passport_number).match) {
-      matchScore += 30; analysisLog.push('✅ Passport');
-    }
-  }
-  if (inputDetails.nationalId && candidate.national_id) {
-    if (idMatcher.matchNationalId(inputDetails.nationalId, candidate.national_id).match) {
-      matchScore += 30; analysisLog.push('✅ NationalID');
-    }
-  }
-
-  return { finalScore: Math.min(matchScore, 100), analysisLog: analysisLog.join(' | ') };
+  const { finalScore, analysis, variants_used, verification } = await aiNameMatcher.superMatchScore(inputName, candidate);
+  
+  return {
+    finalScore,
+    analysisLog: analysis,
+    ai_verification: verification,
+    phonetic_variants: variants_used.slice(0, 3) // Top 3 for frontend
+  };
 };
 
+// 🆕 UPDATED: Parallel processing with broader search
 const analyzeMatches = async (potentialMatches, inputName, inputDetails) => {
-  const startTime = Date.now();
-  const analyzedMatches = await Promise.all(
-    potentialMatches.slice(0, MAX_RESULTS_TO_ANALYZE).map(async (candidate) => {
-      const { finalScore, analysisLog } = await calculateMatchScore(candidate, inputName, inputDetails);
-      return { ...candidate, finalScore, analysisLog };
-    })
+  // Analyze top 30 for better coverage, return top 10
+  const analyzed = await Promise.allSettled(
+    potentialMatches.slice(0, 30).map(c => calculateMatchScore(c, inputName, inputDetails))
   );
-  analyzedMatches.sort((a, b) => b.finalScore - a.finalScore);
-  console.log(`🔬 Analysis complete: ${Date.now() - startTime}ms`);
-  return analyzedMatches;
+  
+  const valid = analyzed
+    .filter(p => p.status === 'fulfilled')
+    .map(p => ({ ...potentialMatches[analyzed.indexOf(p)], ...p.value }))
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .slice(0, 10); // Return best 10
+
+  console.log(`🔬 Super analysis complete: ${valid.length} matches`);
+  return valid;
 };
 
 const performAIAnalysis = async (bestCandidate, inputName, inputDetails) => {
@@ -215,24 +148,21 @@ const performAIAnalysis = async (bestCandidate, inputName, inputDetails) => {
   return { aiAnalysis, aiTime: Date.now() - aiStartTime };
 };
 
-const formatMatches = (analyzedMatches) => {
-  return analyzedMatches.map(m => ({
-    id: m.id,
-    name: m.entity_name,
-    score: m.finalScore,
-    finalScore: m.finalScore, 
-    match_score: m.finalScore,
-    source: m.list_source,
- program: m.program,
-    analysis: m.analysisLog,
-    isPEP: m.is_pep,
-    // 🛑 NEW: Add a clear match type for easy frontend styling
-    match_type: m.is_pep ? 'PEP' : 'SANCTIONS', 
-    nationalities: m.nationalities,
-    dateOfBirth: m.date_of_birth,
-    entity_summary: m.bio || null 
-   }));
-};
+// 🆕 UPDATED: Enhanced formatMatches with new fields
+const formatMatches = (analyzedMatches) => analyzedMatches.map(m => ({
+  entity_name: m.entity_name || m.name,
+  list_type: m.list_source || m.source,
+  match_score: Math.round(m.finalScore),
+  program: m.program || (m.is_pep ? 'PEP' : 'Sanctions'),
+  nationalities: Array.isArray(m.nationalities) ? m.nationalities : m.nationalities?.split(',') || [],
+  date_of_birth: m.date_of_birth || 'Not specified',
+  is_pep: !!m.is_pep,
+  entity_type: m.is_pep ? 'PEP' : 'Sanctions', // Correct badge
+  bio: m.bio || m.entity_summary,
+  analysisLog: m.analysisLog,
+  phonetic_matches: m.phonetic_variants || [],
+  ai_verification: m.ai_verification
+}));
 
 // ==========================================
 // MAIN FUNCTION
@@ -273,11 +203,15 @@ async function screenName(inputName, inputDetails = {}, userId = 'anonymous', ip
     // STEP 4: RISK & BIO GENERATION
     // ============================================================
     
-    // A. GENERATE BIO
+    // A. GENERATE BIO (🆕 UPDATED: with phonetic variants)
     let generatedBio = null;
     if (bestCandidate.is_pep || bestCandidate.finalScore > 75) {
         try {
-            generatedBio = await generateBioForPEP(bestCandidate.entity_name, bestCandidate.program);
+            generatedBio = await generateBioForPEP(
+              bestCandidate.entity_name, 
+              bestCandidate.program, 
+              analyzedMatches[0]?.phonetic_variants || []
+            );
             console.log(`✅ Bio successfully generated for response: ${generatedBio?.substring(0, 50)}...`);
         } catch (e) {
             console.log("⚠️ Bio generation skipped:", e.message);
@@ -318,68 +252,73 @@ async function screenName(inputName, inputDetails = {}, userId = 'anonymous', ip
         }
     }
 
-// STEP 5: COMPILE RESULT
-const totalTime = Date.now() - screeningStartTime;
+    // STEP 5: COMPILE RESULT
+    const totalTime = Date.now() - screeningStartTime;
 
-// 🛑 NEW: Add bio to the best candidate for frontend compatibility
-if (analyzedMatches.length > 0) {
-    // The bio only exists for the best match, so we attach it here.
-    analyzedMatches[0].bio = generatedBio;
-}
-
-// Prepare the improved AI Assessment Wording (Assuming you applied the previous fix here)
-const improvedAiReasoning = aiAnalysis.reasoning
-    ? String(aiAnalysis.reasoning).replace(/candidate/gi, 'subject') 
-    : `The subject, ${cleanInput}, has a **${bestCandidate.is_pep ? 'Politically Exposed Person (PEP)' : 'Sanctions'}** status, which indicates a heightened risk requiring thorough review.`;
-
-// Determine the professional title for the Bio/Profile section
-const bioTitle = bestCandidate.is_pep 
-    ? "Politically Exposed Person (PEP) Profile" 
-    : "Sanctions Entity Profile";
-
-// CRITICAL FIX: Ensure bio and ai_analysis are at the TOP LEVEL of response
-const result = {
-    match_found: true,
-    name: cleanInput,
-    matches: formatMatches(analyzedMatches), 
-    best_match: bestCandidate, 
-    
-    // ===== TOP LEVEL FIELDS (CRITICAL) - Updated Titles and Wording =====
-    risk_level: finalRisk,
-    
-    // 🛑 New Professional Titles for Frontend Display (as requested)
-    risk_summary_title: "Risk Assessment Summary", 
-    ai_assessment_title: "Due Diligence Analysis", 
-    
-    // 🛑 NEW: Title for the Bio Section
-    bio_title: bioTitle, 
-    
-    bio: generatedBio || aiAnalysis.bio || null,  
-    ai_analysis: improvedAiReasoning,
-    
-    // Additional nested structure for backward compatibility
-    topMatch: {
-        decision: aiAnalysis.final_decision || "REVIEW",
-        riskLevel: finalRisk,
-        reasoning: improvedAiReasoning, // Use improved reasoning here too
-        bio: generatedBio || aiAnalysis.bio,
-        confidence: bestCandidate.finalScore
-    },
-    
-    analysis: improvedAiReasoning, // Use improved reasoning here too
-    timestamp: new Date().toISOString(),
-    
-    // Performance metrics
-    performance: {
-        total_time: totalTime,
-        db_time: dbTime,
-        analysis_time: analysisTime,
-        ai_time: aiTime
+    // 🛑 NEW: Add bio to the best candidate for frontend compatibility
+    if (analyzedMatches.length > 0) {
+        // The bio only exists for the best match, so we attach it here.
+        analyzedMatches[0].bio = generatedBio;
     }
-};
 
-// Debug log to verify bio is in result
-console.log(`📊 Result compiled - Bio included: ${!!result.bio}, AI Analysis included: ${!!result.ai_analysis}`);
+    // Prepare the improved AI Assessment Wording
+    const improvedAiReasoning = aiAnalysis.reasoning
+        ? String(aiAnalysis.reasoning).replace(/candidate/gi, 'subject') 
+        : `The subject, ${cleanInput}, has a **${bestCandidate.is_pep ? 'Politically Exposed Person (PEP)' : 'Sanctions'}** status, which indicates a heightened risk requiring thorough review.`;
+
+    // Determine the professional title for the Bio/Profile section
+    const bioTitle = bestCandidate.is_pep 
+        ? "Politically Exposed Person (PEP) Profile" 
+        : "Sanctions Entity Profile";
+
+    // CRITICAL FIX: Ensure bio and ai_analysis are at the TOP LEVEL of response
+    const result = {
+        match_found: true,
+        name: cleanInput,
+        matches: formatMatches(analyzedMatches), 
+        best_match: bestCandidate, 
+        
+        // ===== TOP LEVEL FIELDS (CRITICAL) - Updated Titles and Wording =====
+        risk_level: finalRisk,
+        
+        // 🛑 New Professional Titles for Frontend Display (as requested)
+        risk_summary_title: "Risk Assessment Summary", 
+        ai_assessment_title: "Due Diligence Analysis", 
+        
+        // 🛑 NEW: Title for the Bio Section
+        bio_title: bioTitle, 
+        
+        bio: generatedBio || aiAnalysis.bio || null,  
+        ai_analysis: improvedAiReasoning,
+        
+        // Additional nested structure for backward compatibility
+        topMatch: {
+            decision: aiAnalysis.final_decision || "REVIEW",
+            riskLevel: finalRisk,
+            reasoning: improvedAiReasoning, // Use improved reasoning here too
+            bio: generatedBio || aiAnalysis.bio,
+            confidence: bestCandidate.finalScore
+        },
+        
+        analysis: improvedAiReasoning, // Use improved reasoning here too
+        timestamp: new Date().toISOString(),
+        
+        // Performance metrics
+        performance: {
+            total_time: totalTime,
+            db_time: dbTime,
+            analysis_time: analysisTime,
+            ai_time: aiTime
+        }
+    };
+
+    // 🆕 ADDED: Phonetic suggestions to main response
+    result.phonetic_suggestions = analyzedMatches[0]?.phonetic_variants || [];
+    result.ai_analysis = `AI detected variants: ${result.phonetic_suggestions.join(', ')}. ${improvedAiReasoning}`;
+
+    // Debug log to verify bio is in result
+    console.log(`📊 Result compiled - Bio included: ${!!result.bio}, AI Analysis included: ${!!result.ai_analysis}`);
+    
     // STEP 6: CACHE & LOG
     if (Object.keys(inputDetails).length === 0) searchCache.set(cacheKey, result);
     
