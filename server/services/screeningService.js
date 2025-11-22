@@ -162,9 +162,9 @@ const calculateMatchScore = async (candidate, inputName, inputDetails) => {
     
     return {
       finalScore: (aiResult.finalScore || 0) + phoneticBonus,
-      analysisLog: aiResult.analysis || [],
+      analysisLog: Array.isArray(aiResult.analysis) ? aiResult.analysis : [aiResult.analysis || 'No analysis'],
       ai_verification: aiResult.verification || null,
-      phonetic_variants: aiResult.variants_used?.slice(0, 3) || [],
+      phonetic_variants: [], // variants_used is a number, not an array
       phoneticBonus: phoneticBonus
     };
   } catch (error) {
