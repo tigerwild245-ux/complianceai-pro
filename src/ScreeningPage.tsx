@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Search, AlertCircle, CheckCircle, XCircle, Download, Clock, History, Crown, Shield, Award, FileSpreadsheet, FileText, FileDown, Brain, TrendingUp, AlertTriangle, LogOut } from 'lucide-react';
+import { Search, AlertCircle, CheckCircle, XCircle, Download, Shield, Brain, TrendingUp, AlertTriangle, LogOut } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:10000/api';  // FIXED: Correct API endpoint
+const API_BASE_URL = 'http://localhost:10000/api';
 
 interface Match {
   entity_name: string;
@@ -24,7 +24,7 @@ interface SearchResult {
 }
 
 export default function ScreeningPage() {
-  const [entityName, setEntityName] = useState('Mostafa Madbouly');  // PRELOAD
+  const [entityName, setEntityName] = useState('Mostafa Madbouly');
   const [country, setCountry] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [entityType, setEntityType] = useState<'individual' | 'entity' | 'both'>('individual');
@@ -38,7 +38,6 @@ export default function ScreeningPage() {
   }, []);
 
   const fetchStats = async () => {
-    // Mock stats for demo
     setStats({
       total_sanctions: 1250000,
       status: 'LIVE'
@@ -63,7 +62,7 @@ export default function ScreeningPage() {
         },
         body: JSON.stringify({
           name: entityName,
-          type: entityType,  // Send entityType
+          type: entityType,
           nationality: country || null,
           date_of_birth: dateOfBirth || null
         }),
@@ -75,13 +74,12 @@ export default function ScreeningPage() {
 
       const data = await response.json();
       
-      // Transform OUR backend response to YOUR interface EXACTLY
       const transformedResult: SearchResult = {
         name: data.name,
         match_found: data.match_found,
         matches: data.matches.map((match: any) => ({
           entity_name: match.name || match.entity_name,
-          entity_type: match.is_pep ? 'individual PEP' : 'sanctions',
+          entity_type: match.entity_type || (match.is_pep ? 'PEP' : 'Sanctions'),
           list_source: match.list_type || match.list_source,
           program: match.program,
           nationalities: typeof match.nationalities === 'string' 
@@ -106,31 +104,46 @@ export default function ScreeningPage() {
     }
   };
 
-  // YOUR EXACT ORIGINAL FUNCTIONS - 100% UNCHANGED
   const getRiskColor = (level: string) => {
     switch (level.toUpperCase()) {
-      case 'HIGH': case 'CRITICAL': return 'bg-red-50 border-red-300 text-red-900';
-      case 'MEDIUM': return 'bg-yellow-50 border-yellow-300 text-yellow-900';
-      case 'LOW': return 'bg-green-50 border-green-300 text-green-900';
-      default: return 'bg-gray-50 border-gray-300 text-gray-900';
+      case 'HIGH': 
+      case 'CRITICAL': 
+        return 'bg-red-50 border-red-300 text-red-900';
+      case 'MEDIUM': 
+        return 'bg-yellow-50 border-yellow-300 text-yellow-900';
+      case 'LOW': 
+        return 'bg-green-50 border-green-300 text-green-900';
+      default: 
+        return 'bg-gray-50 border-gray-300 text-gray-900';
     }
   };
 
   const getRiskIcon = (level: string) => {
     switch (level.toUpperCase()) {
-      case 'HIGH': case 'CRITICAL': return <AlertTriangle className="w-6 h-6 text-red-600" />;
-      case 'MEDIUM': return <AlertCircle className="w-6 h-6 text-yellow-600" />;
-      case 'LOW': return <CheckCircle className="w-6 h-6 text-green-600" />;
-      default: return <XCircle className="w-6 h-6 text-gray-600" />;
+      case 'HIGH': 
+      case 'CRITICAL': 
+        return <AlertTriangle className="w-6 h-6 text-red-600" />;
+      case 'MEDIUM': 
+        return <AlertCircle className="w-6 h-6 text-yellow-600" />;
+      case 'LOW': 
+        return <CheckCircle className="w-6 h-6 text-green-600" />;
+      default: 
+        return <XCircle className="w-6 h-6 text-gray-600" />;
     }
   };
 
   const getActionColor = (action: string) => {
     switch (action.toUpperCase()) {
-      case 'ESCALATE': case 'BLOCK': return 'bg-red-600 text-white';
-      case 'REVIEW': return 'bg-yellow-600 text-white';
-      case 'APPROVE': case 'CLEAR': return 'bg-green-600 text-white';
-      default: return 'bg-gray-600 text-white';
+      case 'ESCALATE': 
+      case 'BLOCK': 
+        return 'bg-red-600 text-white';
+      case 'REVIEW': 
+        return 'bg-yellow-600 text-white';
+      case 'APPROVE': 
+      case 'CLEAR': 
+        return 'bg-green-600 text-white';
+      default: 
+        return 'bg-gray-600 text-white';
     }
   };
 
@@ -143,10 +156,11 @@ export default function ScreeningPage() {
     link.href = url;
     link.download = `compliance-report-${entityName}-${Date.now()}.json`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <nav className="bg-white shadow-lg border-b border-blue-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -155,9 +169,7 @@ export default function ScreeningPage() {
               <Shield className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                ComplianceAI Pro
-              </h1>
+              <h1 className="text-2xl font-bold text-slate-900">ComplianceAI Pro</h1>
               <p className="text-xs text-blue-700 font-semibold">Enterprise Sanctions Intelligence</p>
             </div>
           </div>
@@ -173,7 +185,7 @@ export default function ScreeningPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Search Section - YOUR EXACT CODE */}
+          {/* Main Search Section */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -216,36 +228,19 @@ export default function ScreeningPage() {
                     Entity Type *
                   </label>
                   <div className="grid grid-cols-3 gap-3">
-                    <button
-                      onClick={() => setEntityType('individual')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
-                        entityType === 'individual'
-                          ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
-                          : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
-                      }`}
-                    >
-                      Individual
-                    </button>
-                    <button
-                      onClick={() => setEntityType('entity')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
-                        entityType === 'entity'
-                          ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
-                          : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
-                      }`}
-                    >
-                      Entity
-                    </button>
-                    <button
-                      onClick={() => setEntityType('both')}
-                      className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
-                        entityType === 'both'
-                          ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
-                          : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
-                      }`}
-                    >
-                      Both
-                    </button>
+                    {(['individual', 'entity', 'both'] as const).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setEntityType(type)}
+                        className={`px-4 py-3.5 border-2 rounded-xl font-semibold transition-all shadow-sm ${
+                          entityType === type
+                            ? 'border-purple-600 bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-200'
+                            : 'border-slate-300 text-slate-700 hover:border-purple-400 bg-white hover:bg-purple-50'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -295,7 +290,7 @@ export default function ScreeningPage() {
               </div>
             </div>
 
-            {/* AI Analysis Results */}
+            {/* Results */}
             {result && (
               <div className={`rounded-lg shadow-md border-2 p-8 ${getRiskColor(result.risk_level)}`}>
                 <div className="flex items-center justify-between mb-6">
@@ -308,22 +303,17 @@ export default function ScreeningPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <span className={`px-4 py-2 rounded-lg font-bold text-sm uppercase tracking-wide ${getActionColor(result.recommended_action)}`}>
-                      {result.recommended_action}
-                    </span>
-                  </div>
+                  <span className={`px-4 py-2 rounded-lg font-bold text-sm uppercase tracking-wide ${getActionColor(result.recommended_action)}`}>
+                    {result.recommended_action}
+                  </span>
                 </div>
 
-                {/* AI Compliance Analysis */}
                 {result.ai_analysis && (
-                  <div className="mb-6 p-6 bg-white/90 backdrop-blur rounded-lg border-2 border-slate-300 shadow-sm">
+                  <div className="mb-6 p-6 bg-white rounded-lg border-2 border-slate-300 shadow-sm">
                     <div className="flex items-start gap-3 mb-3">
                       <Brain className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
                       <div className="flex-1">
-                        <h4 className="font-bold text-lg text-slate-900 mb-1">
-                          Compliance Risk Analysis
-                        </h4>
+                        <h4 className="font-bold text-lg text-slate-900 mb-1">Compliance Risk Analysis</h4>
                         <p className="text-sm text-slate-600 font-semibold uppercase tracking-wide">
                           Automated Intelligence Assessment
                         </p>
@@ -337,69 +327,67 @@ export default function ScreeningPage() {
                   </div>
                 )}
 
-                {/* Export Button */}
                 {result.matches.length > 0 && (
-                  <div className="flex justify-end mb-6">
-                    <button
-                      onClick={exportToJSON}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-xl hover:bg-gray-50 transition border-2 border-gray-300 shadow-sm font-semibold text-sm"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export Report
-                    </button>
-                  </div>
-                )}
+                  <>
+                    <div className="flex justify-end mb-6">
+                      <button
+                        onClick={exportToJSON}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-xl hover:bg-gray-50 transition border-2 border-gray-300 shadow-sm font-semibold text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export Report
+                      </button>
+                    </div>
 
-                {/* Detailed Matches */}
-                {result.matches.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-base flex items-center gap-2 text-slate-900 uppercase tracking-wide">
-                      <TrendingUp className="w-5 h-5" />
-                      Match Details
-                    </h4>
-                    {result.matches.map((match, idx) => (
-                      <div key={idx} className="bg-white/95 backdrop-blur rounded-lg p-6 shadow-sm border-2 border-slate-200">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wide">
-                                Match #{idx + 1}
-                              </span>
-                              <span className="bg-slate-200 text-slate-800 text-xs font-bold px-3 py-1 rounded uppercase">
-                                {match.entity_type}
-                              </span>
-                              <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded border border-slate-300">
-                                {match.list_source}
-                              </span>
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-base flex items-center gap-2 text-slate-900 uppercase tracking-wide">
+                        <TrendingUp className="w-5 h-5" />
+                        Match Details
+                      </h4>
+                      {result.matches.map((match, idx) => (
+                        <div key={idx} className="bg-white rounded-lg p-6 shadow-sm border-2 border-slate-200">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-3">
+                                <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1 rounded uppercase tracking-wide">
+                                  Match #{idx + 1}
+                                </span>
+                                <span className={`${match.entity_type === 'PEP' ? 'bg-yellow-200 text-yellow-800' : 'bg-slate-200 text-slate-800'} text-xs font-bold px-3 py-1 rounded uppercase`}>
+                                  {match.entity_type}
+                                </span>
+                                <span className="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded border border-slate-300">
+                                  {match.list_source}
+                                </span>
+                              </div>
+                              <h5 className="text-xl font-bold text-slate-900">{match.entity_name}</h5>
+                              <p className="text-sm text-slate-600 font-medium">
+                                Program: <span className="font-bold text-slate-800">{match.program}</span>
+                              </p>
                             </div>
-                            <h5 className="text-xl font-bold text-slate-900">{match.entity_name}</h5>
-                            <p className="text-sm text-slate-600 font-medium">
-                              Program: <span className="font-bold text-slate-800">{match.program}</span>
-                            </p>
+                            <div className="text-right ml-4">
+                              <div className="text-3xl font-bold text-slate-900">
+                                {(match.match_score * 100).toFixed(0)}%
+                              </div>
+                              <p className="text-xs text-slate-600 font-bold uppercase tracking-wide">Match Score</p>
+                            </div>
                           </div>
-                          <div className="text-right ml-4">
-                            <div className="text-3xl font-bold text-slate-900">
-                              {(match.match_score * 100).toFixed(0)}%
+
+                          <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t-2 border-slate-200">
+                            <div>
+                              <p className="text-slate-500 mb-1 font-bold text-xs uppercase tracking-wide">Nationalities</p>
+                              <p className="text-slate-900 font-semibold">
+                                {match.nationalities?.length > 0 ? match.nationalities.join(', ').toUpperCase() : 'Not specified'}
+                              </p>
                             </div>
-                            <p className="text-xs text-slate-600 font-bold uppercase tracking-wide">Match Score</p>
+                            <div>
+                              <p className="text-slate-500 mb-1 font-bold text-xs uppercase tracking-wide">Date of Birth</p>
+                              <p className="text-slate-900 font-semibold">{match.date_of_birth}</p>
+                            </div>
                           </div>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm pt-4 border-t-2 border-slate-200">
-                          <div>
-                            <p className="text-slate-500 mb-1 font-bold text-xs uppercase tracking-wide">Nationalities</p>
-                            <p className="text-slate-900 font-semibold">
-                              {match.nationalities?.length > 0 ? match.nationalities.join(', ').toUpperCase() : 'Not specified'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-slate-500 mb-1 font-bold text-xs uppercase tracking-wide">Date of Birth</p>
-                            <p className="text-slate-900 font-semibold">{match.date_of_birth || 'Not specified'}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {result.total_matches === 0 && (
@@ -415,7 +403,6 @@ export default function ScreeningPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Stats Card */}
             {stats && (
               <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-6">
                 <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-slate-900">
@@ -428,18 +415,13 @@ export default function ScreeningPage() {
                   </div>
                   <p className="text-xs text-blue-100 font-semibold uppercase tracking-wide">Records Monitored</p>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 shadow-sm">
-                    <span className="text-slate-700 font-semibold">Status</span>
-                    <span className="text-green-600 font-bold uppercase text-xs tracking-wide">
-                      {stats.status}
-                    </span>
-                  </div>
+                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 shadow-sm">
+                  <span className="text-slate-700 font-semibold">Status</span>
+                  <span className="text-green-600 font-bold uppercase text-xs tracking-wide">{stats.status}</span>
                 </div>
               </div>
             )}
 
-            {/* Coverage Panel */}
             <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-6">
               <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-slate-900">
                 <Shield className="w-5 h-5 text-blue-600" />
@@ -468,58 +450,36 @@ export default function ScreeningPage() {
               </div>
             </div>
 
-            {/* AI Features */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-xl border-2 border-blue-200 p-6">
               <h3 className="font-bold text-base mb-4 flex items-center gap-2 text-slate-900">
                 <Brain className="w-5 h-5 text-blue-600" />
                 Compliance Intelligence Features
               </h3>
               <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3 p-3.5 bg-white rounded-xl border border-blue-100 shadow-sm">
-                  <Shield className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <p className="font-bold text-lg text-slate-900 mb-1">
-                      Risk Assessment
-                    </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
-                      Automated compliance risk scoring
-                    </p>
+                {[
+                  { icon: Shield, title: 'Risk Assessment', desc: 'Automated compliance risk scoring', color: 'slate' },
+                  { icon: TrendingUp, title: 'Match Analysis', desc: 'Intelligent entity verification', color: 'purple' },
+                  { icon: AlertTriangle, title: 'Action Recommendations', desc: 'Decision support guidance', color: 'blue' }
+                ].map((feature, idx) => (
+                  <div key={idx} className={`flex items-start gap-3 p-3.5 bg-white rounded-xl border border-${feature.color}-100 shadow-sm`}>
+                    <feature.icon className={`w-6 h-6 text-${feature.color}-600 flex-shrink-0 mt-1`} />
+                    <div className="flex-1">
+                      <p className="font-bold text-lg text-slate-900 mb-1">{feature.title}</p>
+                      <p className="text-slate-600 font-semibold uppercase tracking-wide">{feature.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3 p-3.5 bg-white rounded-xl border border-purple-100 shadow-sm">
-                  <TrendingUp className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <p className="font-bold text-lg text-slate-900 mb-1">
-                      Match Analysis
-                    </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
-                      Intelligent entity verification
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-3.5 bg-white rounded-xl border border-blue-100 shadow-sm">
-                  <AlertTriangle className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <p className="font-bold text-lg text-slate-900 mb-1">
-                      Action Recommendations
-                    </p>
-                    <p className="text-slate-600 font-semibold uppercase tracking-wide">
-                      Decision support guidance
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="mt-12 bg-gradient-to-r from-blue-600 to-blue-800 shadow-2xl py-8">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/10 rounded-lg backdrop-blur">
+              <div className="p-2 bg-white bg-opacity-10 rounded-lg backdrop-blur">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
