@@ -4,8 +4,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Use a fast but capable model
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// 🛑 FIX: Use the specific version tag "gemini-1.5-flash-001" to resolve the 404 error
+// If this still fails in your specific region, change this string to "gemini-pro"
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
 /**
  * Generates a richer 3-line biography for a given entity.
@@ -14,7 +15,7 @@ async function generateBioForPEP(name, program) {
   if (!name) return null;
 
   try {
-    // 🛑 PROMPT UPDATE: Requesting more depth for 3 lines of text
+    // Enhanced Prompt for 3-line detailed bio
     const prompt = `
     Role: Expert Compliance Analyst.
     Task: Write a detailed identity profile for the subject: "${name}".
@@ -35,12 +36,13 @@ async function generateBioForPEP(name, program) {
     const response = await result.response;
     const text = response.text();
     
-    // Basic cleanup
+    // Basic cleanup to remove markdown bolding if AI adds it
     return text.replace(/\*\*/g, '').trim();
 
   } catch (error) {
+    // Log the specific error to help with debugging
     console.warn(`⚠️ Gemini Bio Generation Failed for ${name}:`, error.message);
-    return null; // Returning null allows the UI to handle it gracefully
+    return null; // Return null so the UI handles it gracefully without crashing
   }
 }
 
