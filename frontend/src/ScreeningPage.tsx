@@ -337,46 +337,72 @@ export default function ScreeningPage() {
             </div>
 
             {/* Results Section */}
-            {result && (
-              <div className={`rounded-lg shadow-md border-2 p-8 ${getRiskColor(result.risk_level)}`}>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    {getRiskIcon(result.risk_level)}
-                    <div>
-                      <h3 className="text-2xl font-bold">{result.risk_level} RISK LEVEL</h3>
-                      <p className="text-sm opacity-80 font-medium">
-                        {result.total_matches} match{result.total_matches !== 1 ? 'es' : ''} identified
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className={`px-4 py-2 rounded-lg font-bold text-sm uppercase tracking-wide ${getActionColor(result.recommended_action)}`}>
-                      {result.recommended_action}
-                    </span>
-                  </div>
-                </div>
+ {result && (
+  <div className={`rounded-lg shadow-md border-2 p-8 ${getRiskColor(result.risk_level)}`}>
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-4">
+        {getRiskIcon(result.risk_level)}
+        <div>
+          <h3 className="text-2xl font-bold">{result.risk_level} RISK LEVEL</h3>
+          <p className="text-sm opacity-80 font-medium">
+            {result.total_matches} match{result.total_matches !== 1 ? 'es' : ''} identified
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <span className={`px-4 py-2 rounded-lg font-bold text-sm uppercase tracking-wide ${getActionColor(result.recommended_action)}`}>
+          {result.recommended_action}
+        </span>
+      </div>
+    </div>
 
-                {/* AI Analysis */}
-                {result.ai_analysis && (
-                  <div className="mb-6 p-6 bg-white/90 backdrop-blur rounded-lg border-2 border-slate-300 shadow-sm">
-                    <div className="flex items-start gap-3 mb-3">
-                      <Brain className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-lg text-slate-900 mb-1">
-                          🤖 Screening Advanced Analysis
-                        </h4>
-                        <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">
-                          Automated Intelligence Assessment
-                        </p>
-                      </div>
-                    </div>
-                    <div className="pl-9">
-                      <p className="text-sm leading-relaxed text-slate-800 bg-slate-50 p-4 rounded border border-slate-200 font-medium">
-                        {result.ai_analysis}
-                      </p>
-                    </div>
-                  </div>
-                )}
+    {/* 🆕 BIO SECTION - ADD THIS */}
+    {result.bio && result.bio.trim() && (
+      <div className="mb-6 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border-2 border-indigo-300 shadow-md">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <User className="w-6 h-6 text-indigo-700 flex-shrink-0" />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-bold text-xl text-indigo-900 mb-1">
+              {result.bio_title || "📋 Politically Exposed Person (PEP) Profile"}
+            </h4>
+            <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wide">
+              Background & Identity Information
+            </p>
+          </div>
+        </div>
+        <div className="pl-11">
+          <div className="bg-white/80 backdrop-blur p-5 rounded-lg border-2 border-indigo-200 shadow-sm">
+            <p className="text-base leading-relaxed text-slate-800 font-medium">
+              {result.bio}
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* AI Analysis - Your existing code */}
+    {result.ai_analysis && (
+      <div className="mb-6 p-6 bg-white/90 backdrop-blur rounded-lg border-2 border-slate-300 shadow-sm">
+        <div className="flex items-start gap-3 mb-3">
+          <Brain className="w-6 h-6 text-slate-700 flex-shrink-0 mt-1" />
+          <div className="flex-1">
+            <h4 className="font-bold text-lg text-slate-900 mb-1">
+              🤖 Screening Advanced Analysis
+            </h4>
+            <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">
+              Automated Intelligence Assessment
+            </p>
+          </div>
+        </div>
+        <div className="pl-9">
+          <p className="text-sm leading-relaxed text-slate-800 bg-slate-50 p-4 rounded border border-slate-200 font-medium">
+            {result.ai_analysis}
+          </p>
+        </div>
+      </div>
+    )}
 
                 {/* Phonetic Suggestions */}
                 {result.phonetic_suggestions && result.phonetic_suggestions.length > 0 && (
