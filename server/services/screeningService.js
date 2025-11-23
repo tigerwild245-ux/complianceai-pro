@@ -4,34 +4,28 @@ const transformerService = require('./transformerService');
 const idMatcher = require('../utils/idMatcher');
 const { logScreeningEvent } = require('./auditService');
 const { analyzeSanctionsMatch } = require('./aiAnalysisService');
-const { generateBioForPEP } = require('../services/bioService');
-const aiNameMatcher = require('./aiNameMatcher');
-const phoneticMatchers = require('../utils/phoneticMatchers'); // 🆕 Multi-algorithm phonetics
+const { generateBioForPEP } = require('../services/bioService'); 
 const NodeCache = require('node-cache');
 
-// ==========================================
-// CONFIGURATION
-// ==========================================
+// Initialize cache: 1 hour TTL, check expired keys every 2 minutes
 const searchCache = new NodeCache({ 
   stdTTL: 3600, 
   checkperiod: 120,
-  useClones: false,
-  deleteOnExpire: false // Keep expired entries for analytics
+  useClones: false 
 });
 
-// Validation constants
+// ==========================================
+// CONSTANTS & THRESHOLDS
+// ==========================================
 const MIN_INPUT_LENGTH = 2;
 const MAX_INPUT_LENGTH = 200;
-
-// Risk thresholds
-const AI_THRESHOLD_SCORE = 70;
-const AI_THRESHOLD_CROSS_LANGUAGE = 60;
-const AI_THRESHOLD_PEP = 55;
-
-// Performance constants
+const MAX_RESULTS_TO_ANALYZE = 5;
 const DB_RESULT_LIMIT = 20;
-const MAX_CANDIDATES_TO_ANALYZE = 30;
-const MAX_RESULTS_TO_RETURN = 10;
+
+// AI Thresholds
+const AI_THRESHOLD_SCORE = 70;
+const AI_THRESHOLD_CROSS_LANGUAGE = 60; 
+const AI_THRESHOLD_PEP = 55; 
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -40,8 +34,14 @@ const MAX_RESULTS_TO_RETURN = 10;
 const hasArabic = (str) => /[\u0600-\u06FF]/.test(str);
 const hasLatin = (str) => /[a-zA-Z]/.test(str);
 
+// PII Masking Helper for Logs
+const maskPII = (str) => {
+  if (!str) return 'Unknown';
+  return str.split(' ').map((w, i) => i === 0 ? w : '*****').join(' ');
+};
+
 const sanitizeInput = (str) => {
-  if (!str || typeof str !== 'string') return '';
+  if (!str) return '';
   return str.trim().substring(0, MAX_INPUT_LENGTH);
 };
 
@@ -60,33 +60,27 @@ const generateCacheKey = (inputName, inputDetails) => {
   const detailsStr = Object.keys(inputDetails).length > 0 
     ? JSON.stringify(inputDetails) 
     : '';
-  return `screen:${inputName.toLowerCase()}:${detailsStr}`;
+  return `search:${inputName.toLowerCase()}:${detailsStr}`;
 };
 
-// 🛡️ SAFE: Multi-layered AI trigger logic
 const shouldTriggerAI = (score, inputName, candidate) => {
-  if (!candidate || !candidate.entity_name) return false;
-  
   const isCrossLanguage = 
-    (hasArabic(inputName) && hasLatin(candidate.entity_name)) ||
-    (hasLatin(inputName) && hasArabic(candidate.entity_name));
+    (hasArabic(inputName) && hasLatin(candidate.entity_name || '')) ||
+    (hasLatin(inputName) && hasArabic(candidate.entity_name || ''));
     
-  // Enhanced PEP detection
   if (candidate.is_pep && 
       (candidate.pep_level === 'NATIONAL' || candidate.pep_level === 'REGIONAL') &&
       isCrossLanguage &&
       score >= AI_THRESHOLD_PEP) {
     return true;
   }
-  
   if (isCrossLanguage && score >= AI_THRESHOLD_CROSS_LANGUAGE) return true;
   if (score >= AI_THRESHOLD_SCORE) return true;
-  
   return false;
 };
 
 // ==========================================
-// CORE SEARCH & ANALYSIS
+// CORE LOGIC (HELPER FUNCTIONS)
 // ==========================================
 
 const performDatabaseSearch = async (cleanInput) => {
@@ -96,152 +90,129 @@ const performDatabaseSearch = async (cleanInput) => {
       search_name: cleanInput,
       result_limit: DB_RESULT_LIMIT
     });
-    
-    if (error) {
-      console.error('🔍 DB Search Error:', error.message);
-      return { data: null, error, duration: Date.now() - startTime };
-    }
-    
-    // 🛡️ Ensure data is array and remove duplicates
-    const uniqueData = Array.isArray(data) ? [...new Map(data.map(item => [item.id, item])).values()] : [];
-    
-    return { data: uniqueData, error: null, duration: Date.now() - startTime };
+    return { data, error, duration: Date.now() - startTime };
   } catch (err) {
-    console.error('🔍 DB Search Exception:', err.message);
     return { data: null, error: err, duration: Date.now() - startTime };
   }
 };
 
 const performSemanticAnalysis = async (inputName, candidateName) => {
-  if (!inputName || !candidateName) return null;
-  
   try {
     const semanticResult = await transformerService.semanticSimilarity(inputName, candidateName);
-    return semanticResult?.confidence ? semanticResult.confidence * 100 : null;
+    if (semanticResult && semanticResult.confidence) {
+        return semanticResult.confidence * 100;
+    }
   } catch (err) {
     console.warn(`⚠️ Semantic analysis skipped: ${err.message}`);
-    return null;
   }
-};
-
-// 🆕 Enhanced phonetic scoring using multi-algorithm matcher
-const calculatePhoneticBonus = (name1, name2) => {
-  const result = phoneticMatchers.multiMatch(name1, name2, { 
-    threshold: 0.5,
-    algorithms: ['nysiis', 'soundex', 'metaphone']
-  });
-  
-  if (result.match) {
-    console.log(`🎵 Phonetic match: ${result.confidencePercent}% (${result.algorithmsUsed.join(', ')})`);
-    
-    // Tiered bonus based on confidence
-    if (result.confidence >= 0.8) return 25; // High confidence (80%+)
-    if (result.confidence >= 0.6) return 20; // Medium confidence (60%+)
-    return 15; // Low confidence (50%+)
-  }
-  
-  return 0;
+  return null;
 };
 
 const calculateMatchScore = async (candidate, inputName, inputDetails) => {
-  if (!candidate || !candidate.entity_name) {
-    return {
-      finalScore: 0,
-      analysisLog: ['ERROR: Invalid candidate data'],
-      ai_verification: null,
-      phonetic_variants: []
-    };
+  let matchScore = candidate.similarity_score * 100;
+  const analysisLog = [`Fuzzy: ${matchScore.toFixed(1)}%`];
+  const candidateFullName = candidate.entity_name || `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+
+  const normalize = (str) => str ? str.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[\u064B-\u065F]/g, '').replace(/[.,\-_]/g, ' ') : '';
+  const normalizedInput = normalize(inputName);
+  const normalizedCandidate = normalize(candidateFullName);
+  const isCrossLanguage = (hasArabic(inputName) && hasLatin(candidateFullName)) || (hasLatin(inputName) && hasArabic(candidateFullName));
+
+  // 1. CONTAINMENT BOOST
+  if (normalizedInput.length >= 3 && normalizedCandidate.includes(normalizedInput)) {
+    const pattern = new RegExp(`(?:^|\\s)${normalizedInput}(?:\\s|$)`);
+    if (pattern.test(normalizedCandidate)) {
+      if (matchScore < 60) { matchScore = 60; analysisLog.push('✅ Exact Part-Name Match'); }
+      else { matchScore += 10; }
+    } else {
+      if (matchScore < 40) { matchScore += 15; analysisLog.push('Partial Substring'); }
+    }
   }
 
-  try {
-    // Use AI-powered super matcher
-    const aiResult = await aiNameMatcher.superMatchScore(inputName, candidate);
-    
-    // Add phonetic bonus
-    const phoneticBonus = calculatePhoneticBonus(inputName, candidate.entity_name);
-    
-    return {
-      finalScore: (aiResult.finalScore || 0) + phoneticBonus,
-      analysisLog: Array.isArray(aiResult.analysis) ? aiResult.analysis : [aiResult.analysis || 'No analysis'],
-      ai_verification: aiResult.verification || null,
-      phonetic_variants: [], // variants_used is a number, not an array
-      phoneticBonus: phoneticBonus
-    };
-  } catch (error) {
-    console.error('❌ Error in calculateMatchScore:', error);
-    return {
-      finalScore: 0,
-      analysisLog: [`Calculation error: ${error.message}`],
-      ai_verification: null,
-      phonetic_variants: []
-    };
+  // 2. SEMANTIC MATCHING
+  const semanticScore = await performSemanticAnalysis(inputName, candidateFullName);
+  if (semanticScore !== null && !isNaN(semanticScore)) {
+    if (matchScore < 10 && semanticScore > 80) matchScore = semanticScore;
+    else matchScore = (matchScore * 0.6) + (semanticScore * 0.4);
+    analysisLog.push(`Semantic: ${semanticScore.toFixed(1)}%`);
   }
+
+  // 3. FULL ALIAS MATCHING
+  if (candidate.aliases) {
+    try {
+      let aliasBoost = 0;
+      const aliases = Array.isArray(candidate.aliases) ? candidate.aliases : [candidate.aliases];
+      
+      for (const alias of aliases) {
+        const aliasStr = typeof alias === 'object' ? JSON.stringify(alias) : String(alias);
+        const normalizedAlias = normalize(aliasStr);
+        
+        if (normalizedInput === normalizedAlias) {
+          aliasBoost = 60;
+          analysisLog.push('✅ Alias (Exact)');
+          break;
+        }
+        if (normalizedInput.length >= 3 && normalizedAlias.includes(normalizedInput)) {
+           const pattern = new RegExp(`(?:^|\\s)${normalizedInput}(?:\\s|$)`);
+           if (pattern.test(normalizedAlias)) aliasBoost = Math.max(aliasBoost, 40);
+        }
+        if (normalizedAlias.includes(normalizedInput) || normalizedInput.includes(normalizedAlias)) {
+           aliasBoost = Math.max(aliasBoost, isCrossLanguage ? 50 : 30);
+        }
+      }
+      
+      if (aliasBoost > 0) {
+        if (matchScore < 40 && aliasBoost >= 50) { matchScore += aliasBoost; analysisLog.push(`Alias Boost: +${aliasBoost}`); }
+        else if (matchScore < 60 && aliasBoost >= 30) { matchScore += (aliasBoost * 0.8); analysisLog.push('Alias Boost'); }
+        else if (aliasBoost >= 15) { matchScore += 15; analysisLog.push('✅ Alias'); }
+      }
+    } catch (err) { console.warn("Alias check failed", err); }
+  }
+
+  // 4. PEP BOOST
+  if (candidate.is_pep) {
+    analysisLog.push(`PEP: ${candidate.pep_level || 'Unknown'}`);
+    if ((candidate.pep_level === 'NATIONAL' || candidate.pep_level === 'REGIONAL') && matchScore < 60 && matchScore >= 30) {
+       matchScore += 25; analysisLog.push('PEP Boost');
+    }
+  }
+
+  // 5. EXACT ID MATCHING
+  if (inputDetails.passportNumber && candidate.passport_number) {
+    if (idMatcher.matchPassport(inputDetails.passportNumber, candidate.passport_number).match) {
+      matchScore += 30; analysisLog.push('✅ Passport');
+    }
+  }
+  if (inputDetails.nationalId && candidate.national_id) {
+    if (idMatcher.matchNationalId(inputDetails.nationalId, candidate.national_id).match) {
+      matchScore += 30; analysisLog.push('✅ NationalID');
+    }
+  }
+
+  return { finalScore: Math.min(matchScore, 100), analysisLog: analysisLog.join(' | ') };
 };
 
-// 🛡️ Robust match analyzer with progressive filtering
 const analyzeMatches = async (potentialMatches, inputName, inputDetails) => {
-  if (!Array.isArray(potentialMatches) || potentialMatches.length === 0) {
-    console.log('🔬 No potential matches to analyze');
-    return [];
-  }
-
-  // Progressively analyze candidates
-  const analyzedPromises = potentialMatches.slice(0, MAX_CANDIDATES_TO_ANALYZE).map(candidate => {
-    // Ensure candidate has required fields
-    const safeCandidate = {
-      id: candidate.id || Math.random().toString(36),
-      entity_name: candidate.entity_name || candidate.name || '',
-      list_source: candidate.list_source || candidate.source || 'Unknown',
-      program: candidate.program || (candidate.is_pep ? 'PEP' : 'Sanctions'),
-      ...candidate
-    };
-    
-    return calculateMatchScore(safeCandidate, inputName, inputDetails);
-  });
-  
-  const results = await Promise.allSettled(analyzedPromises);
-  
-  // Filter successful results and merge with original candidates
-  const validMatches = results
-    .filter(p => p.status === 'fulfilled' && p.value?.finalScore > 0)
-    .map((p, index) => {
-      const original = potentialMatches[index];
-      const analysis = p.value;
-      
-      return {
-        ...original,
-        ...analysis,
-        id: original.id || analysis.id, // Preserve original ID if available
-        is_pep: !!original.is_pep, // 🛡️ Coerce to boolean
-        finalScore: analysis.finalScore || 0
-      };
+  const startTime = Date.now();
+  const analyzedMatches = await Promise.all(
+    potentialMatches.slice(0, MAX_RESULTS_TO_ANALYZE).map(async (candidate) => {
+      const { finalScore, analysisLog } = await calculateMatchScore(candidate, inputName, inputDetails);
+      return { ...candidate, finalScore, analysisLog };
     })
-    .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
-    .slice(0, MAX_RESULTS_TO_RETURN);
-
-  console.log(`🔬 Super analysis complete: ${validMatches.length} high-quality matches`);
-  return validMatches;
+  );
+  analyzedMatches.sort((a, b) => b.finalScore - a.finalScore);
+  console.log(`🔬 Analysis complete: ${Date.now() - startTime}ms`);
+  return analyzedMatches;
 };
 
 const performAIAnalysis = async (bestCandidate, inputName, inputDetails) => {
-  if (!bestCandidate?.entity_name) {
-    return {
-      aiAnalysis: {
-        risk_level: 'LOW',
-        reasoning: 'No valid candidate for AI analysis',
-        final_decision: 'CLEAR'
-      },
-      aiTime: 0
-    };
-  }
-
   const aiStartTime = Date.now();
   const candidateContext = {
     name: bestCandidate.entity_name,
-    type: bestCandidate.entity_type || 'Unknown',
+    type: bestCandidate.entity_type,
     source: bestCandidate.list_source,
     program: bestCandidate.program,
-    isPEP: bestCandidate.is_pep || false,
+    isPEP: bestCandidate.is_pep,
     remarks: bestCandidate.remarks,
     score: bestCandidate.finalScore || 0
   };
@@ -250,30 +221,26 @@ const performAIAnalysis = async (bestCandidate, inputName, inputDetails) => {
   return { aiAnalysis, aiTime: Date.now() - aiStartTime };
 };
 
-// 🛡️ Safe formatter with data validation
 const formatMatches = (analyzedMatches) => {
-  if (!Array.isArray(analyzedMatches)) return [];
-  
-  return analyzedMatches.map((m, index) => ({
-    id: m.id || `match-${index}`,
-    entity_name: m.entity_name || m.name || 'Unknown Entity',
-    list_type: m.list_source || m.source || 'Unknown List',
-    match_score: Math.min(Math.round(m.finalScore || 0), 100),
-    program: m.program || (m.is_pep ? 'PEP' : 'Sanctions'),
-    nationalities: Array.isArray(m.nationalities) ? m.nationalities.filter(Boolean) : [],
-    date_of_birth: m.date_of_birth || 'Not specified',
-    is_pep: !!m.is_pep, // 🛡️ Safe boolean conversion
-    entity_type: m.is_pep ? 'PEP' : 'Sanctions',
-    bio: m.bio || m.entity_summary || null,
-    analysisLog: Array.isArray(m.analysisLog) ? m.analysisLog : [],
-    phonetic_matches: Array.isArray(m.phonetic_variants) ? m.phonetic_variants : [],
-    ai_verification: m.ai_verification || null,
-    phoneticBonus: m.phoneticBonus || 0
-  }));
+  return analyzedMatches.map(m => ({
+    id: m.id,
+    name: m.entity_name,
+    score: m.finalScore,
+    finalScore: m.finalScore, 
+    match_score: m.finalScore,
+    source: m.list_source,
+    program: m.program,
+    analysis: m.analysisLog,
+    isPEP: m.is_pep,
+    // Ensure bio is passed through for matches
+    entity_summary: m.bio || null, 
+    nationalities: m.nationalities,
+    dateOfBirth: m.date_of_birth
+   }));
 };
 
 // ==========================================
-// MAIN SCREENING FUNCTION
+// MAIN FUNCTION
 // ==========================================
 
 async function screenName(inputName, inputDetails = {}, userId = 'anonymous', ipAddress = '0.0.0.0') {
@@ -281,220 +248,154 @@ async function screenName(inputName, inputDetails = {}, userId = 'anonymous', ip
   let dbTime = 0, analysisTime = 0, aiTime = 0;
 
   try {
-    // STEP 0: VALIDATE INPUT
+    // STEP 0: VALIDATE
     const validation = validateInput(inputName);
-    if (!validation.valid) {
-      const errorResult = { 
-        match_found: false,
-        matches: [], 
-        analysis: validation.error, 
-        error: true, 
-        risk_level: 'ERROR',
-        timestamp: new Date().toISOString()
-      };
-      await logScreeningEvent(inputName, userId, ipAddress, errorResult);
-      return errorResult;
-    }
-    
+    if (!validation.valid) return { matches: [], analysis: validation.error, error: true };
     const cleanInput = validation.cleaned;
-    console.log(`🎯 Screening request for: "${cleanInput}"`);
 
-    // STEP 1: CACHE CHECK
+    // STEP 1: CACHE
     const cacheKey = generateCacheKey(cleanInput, inputDetails);
     if (Object.keys(inputDetails).length === 0) {
       const cached = searchCache.get(cacheKey);
-      if (cached) {
-        console.log(`✅ Cache hit for: "${cleanInput}"`);
-        return { ...cached, cached: true };
-      }
+      if (cached) return { ...cached, cached: true };
     }
 
-    // STEP 2: DATABASE SEARCH
+    // STEP 2: DB SEARCH
     const dbResult = await performDatabaseSearch(cleanInput);
     dbTime = dbResult.duration;
-    
     if (dbResult.error || !dbResult.data || dbResult.data.length === 0) {
-        const noMatch = { 
-          match_found: false,
-          matches: [], 
-          analysis: "No matches found in sanctions database",
-          risk_level: "LOW",
-          timestamp: new Date().toISOString(),
-          performance: { db_time: dbTime }
-        };
+        const noMatch = { matches: [], analysis: "No matches found.", risk_level: "LOW" };
         await logScreeningEvent(cleanInput, userId, ipAddress, noMatch);
         return noMatch;
     }
 
-    // STEP 3: ANALYZE & SCORE MATCHES
+    // STEP 3: ANALYZE MATCHES
     const analyzedMatches = await analyzeMatches(dbResult.data, cleanInput, inputDetails);
     analysisTime = Date.now() - screeningStartTime - dbTime;
-    
-    if (analyzedMatches.length === 0) {
-      const noMatch = { 
-        match_found: false,
-        matches: [], 
-        analysis: "Analysis found no viable matches above threshold",
-        risk_level: "LOW",
-        timestamp: new Date().toISOString(),
-        performance: { db_time: dbTime, analysis_time: analysisTime }
-      };
-      await logScreeningEvent(cleanInput, userId, ipAddress, noMatch);
-      return noMatch;
-    }
-
     const bestCandidate = analyzedMatches[0];
-    console.log(`🏆 Best match: ${bestCandidate.entity_name} (Score: ${bestCandidate.finalScore})`);
 
-    // STEP 4: RISK ASSESSMENT & BIO GENERATION
-    let finalRisk = 'LOW';
-    let generatedBio = null;
+    // ============================================================
+    // STEP 4: RISK & BIO GENERATION
+    // ============================================================
     
-    // Generate bio for high-risk entities
-    if (bestCandidate.is_pep || bestCandidate.finalScore >= 75) {
-      try {
-        generatedBio = await generateBioForPEP(
-          bestCandidate.entity_name,
-          bestCandidate.program,
-          bestCandidate.phonetic_matches
-        );
-        console.log(`📄 Bio generated: ${generatedBio?.substring(0, 50)}...`);
-      } catch (e) {
-        console.log("⚠️ Bio generation skipped:", e.message);
-      }
+    // A. GENERATE BIO
+    let generatedBio = null;
+    if (bestCandidate && (bestCandidate.is_pep || bestCandidate.finalScore > 75)) {
+        try {
+            // Mask PII in logs
+            console.log(`📝 Generating bio for: ${maskPII(bestCandidate.entity_name)}`);
+            generatedBio = await generateBioForPEP(bestCandidate.entity_name, bestCandidate.program);
+            console.log(`✅ Bio generated: ${generatedBio ? 'Success' : 'Failed'}`);
+        } catch (e) {
+            console.log("⚠️ Bio generation skipped:", e.message);
+        }
     }
 
-    // Calculate mathematical risk
-    const score = bestCandidate.finalScore || 0;
-    if (score >= 96) finalRisk = 'CRITICAL';
-    else if (score >= 76) finalRisk = 'HIGH';
-    else if (score >= 50) finalRisk = 'MEDIUM';
+    // B. CALCULATE MATH RISK
+    let calculatedRisk = 'LOW';
+    const score = bestCandidate ? bestCandidate.finalScore : 0;
 
-    // STEP 5: AI ANALYSIS (for high-risk or cross-language)
-    let aiAnalysis = {
-      risk_level: finalRisk,
-      reasoning: 'Initial mathematical risk assessment',
-      final_decision: 'REVIEW'
+    if (score >= 96) calculatedRisk = 'CRITICAL';
+    else if (score >= 76) calculatedRisk = 'HIGH';
+    else if (score >= 50) calculatedRisk = 'MEDIUM';
+
+    // C. AI ANALYSIS
+    let aiAnalysis = { 
+        risk_level: 'LOW', 
+        reasoning: 'Score based analysis',
+        final_decision: 'REVIEW' 
     };
 
-    if (shouldTriggerAI(score, cleanInput, bestCandidate)) {
-      console.log('🤖 Starting AI analysis...');
-      const aiResult = await performAIAnalysis(bestCandidate, cleanInput, inputDetails);
-      aiAnalysis = aiResult.aiAnalysis;
-      aiTime = aiResult.aiTime;
-      
-      // AI can upgrade risk level if justified
-      if (aiAnalysis.risk_level && aiAnalysis.risk_level !== finalRisk) {
-        const riskSeverity = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
-        if (riskSeverity[aiAnalysis.risk_level] > riskSeverity[finalRisk]) {
-          finalRisk = aiAnalysis.risk_level;
-          console.log(`🚨 AI upgraded risk to: ${finalRisk}`);
-        }
-      }
+    if (bestCandidate && shouldTriggerAI(bestCandidate.finalScore, cleanInput, bestCandidate)) {
+        console.log('🤖 Starting AI analysis...');
+        const aiResult = await performAIAnalysis(bestCandidate, cleanInput, inputDetails);
+        aiAnalysis = aiResult.aiAnalysis;
+        aiTime = aiResult.aiTime;
+        console.log('✅ Groq analysis complete');
     }
 
-    // STEP 6: COMPILE FINAL RESPONSE
+    // D. FINAL RISK COMPARISON
+    const riskSeverity = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
+    let finalRisk = calculatedRisk;
+    
+    if (aiAnalysis && aiAnalysis.risk_level) {
+        const aiRiskStr = String(aiAnalysis.risk_level).toUpperCase();
+        if (riskSeverity[aiRiskStr] && riskSeverity[aiRiskStr] > riskSeverity[calculatedRisk]) {
+            finalRisk = aiRiskStr;
+        }
+    }
+
+    // STEP 5: COMPILE RESULT
     const totalTime = Date.now() - screeningStartTime;
     
-    // Generate professional titles
-    const bioTitle = bestCandidate.is_pep 
-      ? "Politically Exposed Person (PEP) Profile" 
-      : "Sanctions Entity Profile";
-    
-    const improvedReasoning = aiAnalysis.reasoning || 
-      `Mathematical similarity score of ${score}% indicates ${finalRisk.toLowerCase()} risk. ` +
-      `${bestCandidate.is_pep ? 'PEP status' : 'Sanctions listing'} requires enhanced due diligence.`;
+    // Inject bio into best candidate for formatMatches usage
+    if (bestCandidate) {
+        bestCandidate.bio = generatedBio;
+    }
 
+    // Determine professional title
+    const bioTitle = bestCandidate?.is_pep 
+        ? "Politically Exposed Person (PEP) Profile" 
+        : "Sanctions Entity Profile";
+    
+    const improvedAiReasoning = aiAnalysis.reasoning
+        ? String(aiAnalysis.reasoning).replace(/candidate/gi, 'subject') 
+        : `The subject, ${cleanInput}, has a **${bestCandidate.is_pep ? 'Politically Exposed Person (PEP)' : 'Sanctions'}** status.`;
+
+    // CRITICAL FIX: Ensure bio is at the TOP LEVEL of response
     const result = {
       match_found: true,
       name: cleanInput,
       matches: formatMatches(analyzedMatches),
-      best_match: bestCandidate,
+      best_match: bestCandidate, 
       
-      // TOP-LEVEL FIELDS (for frontend compatibility)
+      // ===== TOP LEVEL FIELDS (CRITICAL) =====
       risk_level: finalRisk,
-      risk_summary_title: "Risk Assessment Summary", 
-      ai_assessment_title: "Due Diligence Analysis", 
+      
+      // 🛑 THE FIX: Maps generatedBio directly to the root 'bio' key
+      bio: generatedBio || aiAnalysis.bio || null, 
       bio_title: bioTitle,
+
+      ai_analysis: improvedAiReasoning,
       
-      bio: generatedBio || aiAnalysis.bio || null,
-      ai_analysis: improvedReasoning,
-      phonetic_suggestions: bestCandidate.phonetic_matches || [],
+      risk_summary_title: "Risk Assessment Summary",
+      ai_assessment_title: "Due Diligence Analysis",
       
-      // Enhanced toMatch structure
+      // Additional nested structure for backward compatibility
       topMatch: {
         decision: aiAnalysis.final_decision || "REVIEW",
         riskLevel: finalRisk,
-        reasoning: improvedReasoning,
+        reasoning: improvedAiReasoning,
         bio: generatedBio || aiAnalysis.bio,
-        confidence: score,
-        entityId: bestCandidate.id,
-        isPEP: bestCandidate.is_pep
+        confidence: bestCandidate.finalScore
       },
       
-      // Performance metrics
+      analysis: improvedAiReasoning,
+      timestamp: new Date().toISOString(),
+      
       performance: {
         total_time: totalTime,
         db_time: dbTime,
         analysis_time: analysisTime,
-        ai_time: aiTime,
-        cache_hit: false
-      },
-      
-      timestamp: new Date().toISOString(),
-      metadata: {
-        candidates_analyzed: dbResult.data.length,
-        matches_returned: analyzedMatches.length,
-        ai_triggered: aiTime > 0,
-        phonetic_bonus_applied: bestCandidate.phoneticBonus || 0
+        ai_time: aiTime
       }
     };
 
-    // STEP 7: CACHE & AUDIT
-    if (Object.keys(inputDetails).length === 0) {
-      searchCache.set(cacheKey, result);
-    }
+    console.log(`📊 Result compiled - Bio Present: ${!!result.bio}`);
+
+    // STEP 6: CACHE & LOG
+    if (Object.keys(inputDetails).length === 0) searchCache.set(cacheKey, result);
     
-    console.log('📝 Logging screening event...');
+    console.log(`📝 Attempting audit log for: ${maskPII(cleanInput)}`);
     await logScreeningEvent(cleanInput, userId, ipAddress, result);
+    console.log('✅ Audit log saved');
 
     return result;
 
   } catch (error) {
-    console.error("❌ CRITICAL SCREENING ERROR:", error);
-    
-    const errorResult = {
-      match_found: false,
-      matches: [],
-      analysis: "System error during screening",
-      risk_level: "ERROR",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal screening error",
-      timestamp: new Date().toISOString(),
-      performance: {
-        total_time: Date.now() - screeningStartTime
-      }
-    };
-    
-    await logScreeningEvent(inputName, userId, ipAddress, errorResult);
-    return errorResult;
+    console.error("❌ Screening Error:", error);
+    return { error: "Screening Failed", matches: [], message: error.message };
   }
 }
 
-// ==========================================
-// EXPORTS
-// ==========================================
-module.exports = { 
-  screenName,
-  clearCache: () => {
-    searchCache.flushAll();
-    phoneticMatchers.clearCache();
-    console.log('🗑️ All caches cleared');
-  },
-  
-  // Test exports
-  test: {
-    validateInput: validateInput,
-    shouldTriggerAI: shouldTriggerAI,
-    calculatePhoneticBonus: calculatePhoneticBonus
-  }
-};
+module.exports = { screenName, clearCache: () => searchCache.flushAll() };
